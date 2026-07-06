@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSettings } from '../../store/useSettings'
+import type { ThemeId } from '../../store/useSettings'
 import { fetchModels } from '../../lib/ai'
 import { PROVIDERS, getProviderDef } from '../../lib/providers'
 import { ErrorBanner, Field } from '../../components/ui'
@@ -131,6 +132,36 @@ function ProviderPanel() {
   )
 }
 
+const THEME_TILES: { id: ThemeId; name: string; bg: string; accent: string; text: string }[] = [
+  { id: 'ember', name: 'Ink & Ember', bg: '#0d0b09', accent: '#e0763a', text: '#e9e0cd' },
+  { id: 'parchment', name: 'Parchment', bg: '#efe6d2', accent: '#b0452f', text: '#2b2318' },
+  { id: 'abyss', name: 'Abyss', bg: '#080c12', accent: '#4fb39c', text: '#dfe7ec' },
+]
+
+function AppearanceCard() {
+  const { theme, setTheme } = useSettings()
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="kicker" style={{ marginBottom: 10 }}>Appearance</div>
+      <div className="theme-tiles">
+        {THEME_TILES.map((t) => (
+          <button
+            key={t.id}
+            className={`theme-tile ${theme === t.id ? 'active' : ''}`}
+            onClick={() => setTheme(t.id)}
+          >
+            <span className="theme-swatch" style={{ background: t.bg, color: t.text }}>
+              <span className="theme-aa">Aa</span>
+              <span className="theme-dot" style={{ background: t.accent }} />
+            </span>
+            <span className="theme-name">{t.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const { maxTokens, setMaxTokens } = useSettings()
   return (
@@ -149,6 +180,7 @@ export default function SettingsPage() {
         <div className="kicker" style={{ marginBottom: 10 }}>Provider — click to activate</div>
         <ProviderCards />
         <ProviderPanel />
+        <AppearanceCard />
 
         <div className="card" style={{ marginTop: 16 }}>
           <Field

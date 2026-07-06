@@ -238,6 +238,221 @@ input.ms-title-input:focus {
 }
 .ms-branch-toggle:hover { color: var(--ember-bright); }
 
+/* ---- Ghost continuation editor ---- */
+
+.ms-ghost-wrap { position: relative; }
+
+/* Mirror: identical typography + box metrics behind a transparent textarea. */
+.ms-ghost-mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  border: none;
+  z-index: 0;
+}
+/* Match the padding the generic textarea rule gives textarea.prose-editor. */
+.ms-ghost-mirror.prose-editor { padding: 9px 12px; min-height: 0; }
+
+textarea.ms-ghost-input {
+  position: relative;
+  z-index: 1;
+  display: block;
+  background: transparent;
+  /* Hide the scrollbar so textarea and mirror wrap at identical widths. */
+  scrollbar-width: none;
+}
+textarea.ms-ghost-input::-webkit-scrollbar { display: none; }
+
+/* While a ghost is visible, open scroll room below the text (both layers). */
+.ms-ghost-on > .prose-editor { padding-bottom: 45vh; }
+
+.ms-ghost-base { color: transparent; }
+.ms-ghost {
+  color: rgba(233, 224, 205, 0.38);
+  font-style: italic;
+}
+.ms-ghost-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background: rgba(233, 224, 205, 0.35);
+  margin-left: 2px;
+  vertical-align: baseline;
+  animation: emberPulse 0.9s ease-in-out infinite;
+}
+
+.ms-ghost-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  z-index: 2;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--parchment-faint);
+  background: rgba(13, 11, 9, 0.85);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-ghost-notice {
+  color: var(--brass);
+  border-color: rgba(201, 163, 92, 0.4);
+}
+
+/* ---- Focus mode ---- */
+
+.ms-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 90; /* below .modal-backdrop (100) so Modals still win */
+  display: flex;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 35%, rgba(224, 118, 58, 0.055), transparent 65%),
+    var(--ink-0);
+}
+/* Candlelight vignette — darkened edges, warm centre left untouched. */
+.ms-focus::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 95% 80% at 50% 42%, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+.ms-focus-col {
+  position: relative;
+  z-index: 1;
+  width: min(68ch, 92vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: 44px;
+}
+.ms-focus-col > .ms-ghost-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.ms-focus-title {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--parchment-faint);
+  margin-bottom: 16px;
+}
+
+/* Applied to BOTH the textarea and its ghost mirror — metrics must match. */
+.ms-focus-editor {
+  font-family: var(--font-prose);
+  font-size: 18.5px;
+  line-height: 1.85;
+  color: var(--parchment);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  /* Bottom padding gives the typewriter room to keep the last line centred. */
+  padding: 6px 4px 45vh;
+  resize: none;
+  overscroll-behavior: contain;
+}
+textarea.ms-focus-editor:focus { border: none; outline: none; }
+
+.ms-focus-hud {
+  position: absolute;
+  right: 24px;
+  bottom: 18px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--parchment-faint);
+}
+
+/* ---- Read aloud + sprint popovers ---- */
+
+.ms-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  width: 280px;
+  padding: 14px;
+  background: var(--ink-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.ms-reading { color: var(--ember-bright); }
+
+/* ---- Writing sprint ---- */
+
+.ms-sprint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--ember-bright);
+  background: var(--ember-dim);
+  border: 1px solid rgba(224, 118, 58, 0.3);
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+.ms-sprint-chip.ms-sprint-done {
+  color: var(--brass);
+  background: var(--brass-dim);
+  border-color: rgba(201, 163, 92, 0.4);
+}
+.ms-sprint-x {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.7;
+  padding: 0 2px;
+}
+.ms-sprint-x:hover { opacity: 1; }
+
+/* ---- Scene time machine ---- */
+
+.ms-snap {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--ink-2);
+}
+.ms-snap-preview {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--parchment-dim);
+  max-height: 260px;
+}
+
 @media (max-width: 1100px) {
   .ms-forks { grid-template-columns: 1fr; }
   .ms-compare { grid-template-columns: 1fr; }

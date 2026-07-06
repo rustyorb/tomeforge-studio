@@ -1,0 +1,41 @@
+/* The Bindery — Export & Backup module (prefix ex-) */
+
+.ex-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(220px, 1fr);
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  .ex-controls { grid-template-columns: 1fr; }
+}
+
+.ex-card { display: flex; flex-direction: column; }
+.ex-card .ex-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 12px;
+  flex: 1;
+}
+.ex-card .btn { align-self: flex-start; }
+
+.ex-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 2px;
+}
+.ex-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+}
+
+.ex-success {
+  color: var(--verdigris);
+  font-size: 13px;
+  margin-top: 10px;
+}

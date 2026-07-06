@@ -5,6 +5,7 @@ import { uid } from '../../lib/id'
 import { streamMessage, extractJsonBlock } from '../../lib/ai'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 import { EmptyState, ErrorBanner, Field, Modal } from '../../components/ui'
+import RelationWeb from './RelationWeb'
 
 const SYNC_KEYS = [
   'location', 'goal', 'secrets', 'injuries', 'relationships',
@@ -31,6 +32,7 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
   const [editingId, setEditingId] = useState<string | null>(null)
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [view, setView] = useState<'cards' | 'web'>('cards')
 
   const editing = project.characters.find((c) => c.id === editingId) ?? null
 
@@ -98,13 +100,31 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
   return (
     <div className="rise">
       <div className="row between" style={{ marginBottom: 16 }}>
-        <span className="kicker">Cast · {project.characters.length}</span>
+        <div className="row">
+          <span className="kicker">Cast · {project.characters.length}</span>
+          <div className="br-viewtoggle">
+            <button
+              className={view === 'cards' ? 'br-active' : ''}
+              onClick={() => setView('cards')}
+            >
+              Cards
+            </button>
+            <button
+              className={view === 'web' ? 'br-active' : ''}
+              onClick={() => setView('web')}
+            >
+              Web
+            </button>
+          </div>
+        </div>
         <button className="btn primary" onClick={addCharacter}>⊕ New Character</button>
       </div>
 
       <ErrorBanner error={syncError} />
 
-      {project.characters.length === 0 ? (
+      {view === 'web' ? (
+        <RelationWeb project={project} styleProfile={styleProfile} />
+      ) : project.characters.length === 0 ? (
         <EmptyState glyph="❦" title="No characters yet">
           The Cast Ledger tracks each character's live state — where they are, what they
           want, what they hide. Forge your first character above.

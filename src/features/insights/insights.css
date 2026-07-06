@@ -1,0 +1,87 @@
+/* Observatory (insights) module — extra styles (prefix ins-) */
+
+.ins-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.ins-stat {
+  background: linear-gradient(180deg, var(--ink-2), var(--ink-1));
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+.ins-stat-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 550;
+  color: var(--parchment);
+}
+.ins-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--parchment-faint);
+  margin-top: 3px;
+}
+
+.ins-section { margin-bottom: 30px; }
+.ins-section > .kicker { display: block; margin-bottom: 12px; }
+
+/* Writing heatmap */
+.ins-heatmap { overflow-x: auto; padding-bottom: 4px; }
+.ins-hm-months {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--parchment-faint);
+}
+.ins-hm-months span { width: 14px; flex-shrink: 0; overflow: visible; white-space: nowrap; }
+.ins-hm-grid { display: flex; gap: 3px; }
+.ins-hm-col { display: flex; flex-direction: column; gap: 3px; }
+.ins-hm-cell { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+.ins-hm-0 { background: var(--ink-3); }
+.ins-hm-1 { background: #46301f; }
+.ins-hm-2 { background: #6f4526; }
+.ins-hm-3 { background: #a85d2e; }
+.ins-hm-4 { background: var(--ember); }
+.ins-hm-future { background: transparent; }
+.ins-hm-hint { margin-top: 10px; font-size: 13px; color: var(--parchment-faint); }
+
+/* Per-project cards */
+.ins-proj-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--parchment-dim);
+  margin: 8px 0 12px;
+  line-height: 1.7;
+}
+.ins-spark-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Composition panel */
+.ins-comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.ins-adverb-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.ins-adverb {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--parchment-dim);
+  border-bottom: 1px dashed var(--line-soft);
+  padding-bottom: 3px;
+}
+.ins-adverb b { color: var(--brass); font-weight: 500; }

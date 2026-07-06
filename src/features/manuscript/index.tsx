@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ID, Project } from '../../types'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
 import { EmptyState, ErrorBanner } from '../../components/ui'
@@ -10,6 +10,12 @@ import Toolbar from './Toolbar'
 import ResultPanels from './ResultPanels'
 import RewritePanel from './RewritePanel'
 import BranchesPanel from './BranchesPanel'
+import FocusMode from './FocusMode'
+import GhostEditor from './GhostEditor'
+import type { GhostEditorHandle, GhostRequest } from './GhostEditor'
+import ReadAloud from './ReadAloud'
+import HistoryDrawer from './HistoryDrawer'
+import { SprintControl, sprintHudText, useSprint } from './Sprint'
 import { useGeneration } from './useGeneration'
 import {
   appendToScene,
@@ -21,6 +27,7 @@ import {
 } from './helpers'
 import {
   GEN_LABELS,
+  GHOST_DIRECTIVE,
   buildDirective,
   buildRewriteDirective,
   excerptFor,
@@ -39,6 +46,10 @@ export default function ManuscriptPage() {
   const [rewriteOpen, setRewriteOpen] = useState(false)
   const [replaceError, setReplaceError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
+  const [focusMode, setFocusMode] = useState(false)
+  const ghostRef = useRef<GhostEditorHandle>(null)
+  const totalWords = project ? manuscriptWordCount(project) : 0
+  const sprintApi = useSprint(totalWords)
 
   // Deep-link contract: the command palette selects a scene via sessionStorage
   // 'tf-select-scene' (page not yet mounted) or a 'tf-select-scene' window event.
@@ -70,7 +81,6 @@ export default function ManuscriptPage() {
   const mutate = (recipe: (draft: Project) => void) => updateProject(project.id, recipe)
   const current = findScene(project, selectedSceneId) ?? firstScene(project)
   const preset = getPreset(project.presetId)
-  const totalWords = manuscriptWordCount(project)
 
   const buildSystem = (taskDirective: string) =>
     buildStoryContext(project, styleProfile, {
@@ -78,6 +88,33 @@ export default function ManuscriptPage() {
       taskDirective,
       presetId: project.presetId,
     })
+
+  const setSceneContent = (sceneId: ID, v: string) =>
+    mutate((d) => {
+      const sc = sceneDraft(d, sceneId)
+      if (sc) sc.content = v
+    })
+
+  /** Ghost continuation: same context assembly as Continue, short and capped. */
+  const buildGhostRequest = (): GhostRequest => ({
+    system: buildSystem(GHOST_DIRECTIVE),
+    user: userMessage(
+      'continue',
+      current ? excerptFor(project, current.scene.content) : '',
+      current?.scene.title ?? '',
+      current?.chapter.title ?? '',
+    ),
+    temperature: preset.temperature,
+  })
+
+  /** Tab-accept: snapshot, then append the ghost exactly as previewed. */
+  const acceptGhost = (sceneId: ID, ghostText: string) => {
+    useStore.getState().snapshotScene(project.id, sceneId, 'Before ghost accept')
+    mutate((d) => {
+      const sc = sceneDraft(d, sceneId)
+      if (sc) sc.content = sc.content + ghostText
+    })
+  }
 
   const runProse = (kind: ProseKind) => {
     if (!current) return
@@ -133,6 +170,7 @@ export default function ManuscriptPage() {
         )
         return
       }
+      useStore.getState().snapshotScene(project.id, job.sceneId, 'Before accept')
       mutate((d) => {
         const sc = sceneDraft(d, job.sceneId)
         if (sc) sc.content = appendToScene(sc.content, text)
@@ -184,6 +222,7 @@ export default function ManuscriptPage() {
       )
       return
     }
+    useStore.getState().snapshotScene(project.id, job.sceneId, 'Before rewrite')
     mutate((d) => {
       const sc = sceneDraft(d, job.sceneId)
       if (!sc) return
@@ -234,6 +273,9 @@ export default function ManuscriptPage() {
                 onRun={runProse}
                 onToggleRewrite={() => setRewriteOpen((v) => !v)}
                 onStop={gen.stop}
+                onFocus={() => setFocusMode(true)}
+                onGhost={() => ghostRef.current?.triggerGhost()}
+                sprintControl={<SprintControl api={sprintApi} totalWords={totalWords} />}
                 mutate={mutate}
               />
 
@@ -253,23 +295,28 @@ export default function ManuscriptPage() {
                       })
                     }}
                   />
-                  <span className="mono faint" style={{ whiteSpace: 'nowrap' }}>
-                    {wordCount(current.scene.content).toLocaleString()} words this scene
+                  <span className="row" style={{ flexShrink: 0 }}>
+                    <span className="mono faint" style={{ whiteSpace: 'nowrap' }}>
+                      {wordCount(current.scene.content).toLocaleString()} words this scene
+                    </span>
+                    <ReadAloud text={current.scene.content} sceneId={current.scene.id} />
+                    <HistoryDrawer
+                      projectId={project.id}
+                      scene={current.scene}
+                      mutate={mutate}
+                    />
                   </span>
                 </div>
                 <div className="panel-body">
-                  <textarea
-                    className="prose-editor"
+                  <GhostEditor
+                    ref={ghostRef}
+                    sceneId={current.scene.id}
                     value={current.scene.content}
                     placeholder="Ink flows here…"
-                    onChange={(e) => {
-                      const v = e.target.value
-                      const id = current.scene.id
-                      mutate((d) => {
-                        const sc = sceneDraft(d, id)
-                        if (sc) sc.content = v
-                      })
-                    }}
+                    variant="page"
+                    onChange={(v) => setSceneContent(current.scene.id, v)}
+                    buildRequest={buildGhostRequest}
+                    onAcceptGhost={(t) => acceptGhost(current.scene.id, t)}
                   />
                 </div>
               </div>
@@ -313,6 +360,19 @@ export default function ManuscriptPage() {
                 mutate={mutate}
                 onSelectScene={setSelectedSceneId}
               />
+
+              {focusMode && (
+                <FocusMode
+                  sceneId={current.scene.id}
+                  sceneTitle={current.scene.title}
+                  value={current.scene.content}
+                  onChange={(v) => setSceneContent(current.scene.id, v)}
+                  buildRequest={buildGhostRequest}
+                  onAcceptGhost={(t) => acceptGhost(current.scene.id, t)}
+                  sprintText={sprintHudText(sprintApi.sprint, totalWords)}
+                  onExit={() => setFocusMode(false)}
+                />
+              )}
             </>
           )}
         </section>

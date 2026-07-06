@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { STORAGE_EVENT, useActiveProject } from './store/useStore'
+import { useSettings } from './store/useSettings'
+import CommandPalette, { OPEN_PALETTE_EVENT } from './features/palette/CommandPalette'
+import ShortcutsHelp from './features/palette/ShortcutsHelp'
+import Welcome from './features/palette/Welcome'
 import Dashboard from './features/dashboard'
 import Manuscript from './features/manuscript'
 import Brain from './features/brain'
@@ -58,6 +62,14 @@ function Nav() {
           </div>
         </div>
       )}
+      <div style={{ marginTop: project ? 8 : 'auto', padding: '10px 10px 4px' }}>
+        <button
+          className="pal-side-hint"
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_PALETTE_EVENT))}
+        >
+          ⌘K — command deck
+        </button>
+      </div>
     </nav>
   )
 }
@@ -84,10 +96,21 @@ function StorageWarning() {
 
 export default function App() {
   const project = useActiveProject()
+  const theme = useSettings((s) => s.theme)
+
+  // Themes override CSS custom properties via [data-theme] on <html>.
+  // 'ember' is the :root default, so the attribute is redundant but harmless.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
   return (
     <div className="app-shell">
       <Nav />
       <StorageWarning />
+      <CommandPalette />
+      <ShortcutsHelp />
+      <Welcome />
       <main className="main-pane">
         <Routes>
           <Route path="/" element={<Dashboard />} />

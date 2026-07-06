@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import type { Pacing, Project, StyleProfile } from '../../types'
 import { PRESETS } from '../../lib/presets'
 import type { GenOverrides, ProseKind } from './generation'
@@ -29,6 +29,10 @@ interface Props {
   onRun: (kind: ProseKind) => void
   onToggleRewrite: () => void
   onStop: () => void
+  onFocus: () => void
+  onGhost: () => void
+  /** Sprint chip / setup control rendered at the row's right edge. */
+  sprintControl: React.ReactNode
   mutate: (recipe: (draft: Project) => void) => void
 }
 
@@ -130,6 +134,16 @@ export default function Toolbar(props: Props) {
           <button className="btn" disabled={props.busy} onClick={props.onToggleRewrite}>
             Rewrite…
           </button>
+          <button
+            className="btn"
+            title="Ghost continuation (Ctrl+Space in the editor)"
+            onClick={props.onGhost}
+          >
+            ✧ Ghost
+          </button>
+          <button className="btn" title="Immersive writing mode" onClick={props.onFocus}>
+            ◉ Focus
+          </button>
 
           <div className="ms-menu-wrap">
             <button className="btn" disabled={props.busy} onClick={() => setMenuOpen((v) => !v)}>
@@ -156,11 +170,14 @@ export default function Toolbar(props: Props) {
             )}
           </div>
 
-          {props.busy && (
-            <button className="btn danger" onClick={props.onStop} style={{ marginLeft: 'auto' }}>
-              <span className="spinner" /> Stop
-            </button>
-          )}
+          <span className="row" style={{ marginLeft: 'auto' }}>
+            {props.sprintControl}
+            {props.busy && (
+              <button className="btn danger" onClick={props.onStop}>
+                <span className="spinner" /> Stop
+              </button>
+            )}
+          </span>
         </div>
       </div>
     </div>

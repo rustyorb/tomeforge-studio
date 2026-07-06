@@ -99,6 +99,14 @@ export function buildRewriteDirective(
     .join(' ')
 }
 
+/** Ghost continuation: short inline suggestion, capped hard via maxTokens. */
+export const GHOST_MAX_TOKENS = 250
+export const GHOST_DIRECTIVE =
+  'Continue the scene seamlessly from the exact end of the excerpt — 1-2 short paragraphs at most. ' +
+  'If the excerpt ends mid-sentence, finish that sentence first, and include any leading space, ' +
+  'punctuation, or paragraph break needed so your text joins the excerpt cleanly when appended ' +
+  'verbatim. Do not repeat or rephrase the excerpt.'
+
 const EXCERPT_CHARS = 4000
 const SHORT_SCENE_THRESHOLD = 600
 

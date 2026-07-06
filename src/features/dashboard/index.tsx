@@ -1,10 +1,43 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/useStore'
+import type { Project } from '../../types'
 import { Field, Modal } from '../../components/ui'
+import { Sparkline } from '../insights/Sparkline'
+import {
+  PALETTE,
+  combinedDaily,
+  currentStreak,
+  dailyWordsForProject,
+  hashString,
+  lastNDays,
+  projectTotalWords,
+} from '../insights/stats'
+import './dashboard.css'
 
-function wordCount(text: string): number {
-  return text.trim() ? text.trim().split(/\s+/).length : 0
+/** Deterministic generative cover: project name → layered gradients. */
+function coverStyle(name: string): React.CSSProperties {
+  const h = hashString(name || 'untitled')
+  const i1 = h % PALETTE.length
+  let i2 = (h >> 3) % PALETTE.length
+  if (i2 === i1) i2 = (i2 + 1) % PALETTE.length
+  const c1 = PALETTE[i1]
+  const c2 = PALETTE[i2]
+  const angle = h % 360
+  const px = 15 + ((h >> 7) % 70)
+  const py = 10 + ((h >> 11) % 60)
+  return {
+    background:
+      `radial-gradient(circle at ${px}% ${py}%, ${c2}cc, transparent 62%), ` +
+      `linear-gradient(${angle}deg, ${c1}, ${c2} 135%)`,
+  }
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join('')
 }
 
 export default function Dashboard() {
@@ -15,8 +48,22 @@ export default function Dashboard() {
   const [genre, setGenre] = useState('')
   const [logline, setLogline] = useState('')
 
+  const daily = useMemo(() => combinedDaily(projects), [projects])
+  const totalWords = projects.reduce((s, p) => s + projectTotalWords(p), 0)
+  const streak = currentStreak(daily)
+
   const open = (id: string) => {
     setActiveProject(id)
+    navigate('/write')
+  }
+
+  const continueWriting = (e: React.MouseEvent, p: Project) => {
+    e.stopPropagation()
+    setActiveProject(p.id)
+    // Deep-link to the last scene of the last chapter (skipping empty chapters).
+    const lastChapter = [...p.chapters].reverse().find((c) => c.scenes.length > 0)
+    const lastScene = lastChapter?.scenes[lastChapter.scenes.length - 1]
+    if (lastScene) sessionStorage.setItem('tf-select-scene', lastScene.id)
     navigate('/write')
   }
 
@@ -31,6 +78,21 @@ export default function Dashboard() {
         </p>
       </header>
 
+      <div className="db-stats rise">
+        <div className="db-stat">
+          <b>{projects.length}</b>
+          <span>tome{projects.length === 1 ? '' : 's'}</span>
+        </div>
+        <div className="db-stat">
+          <b>{totalWords.toLocaleString()}</b>
+          <span>total words</span>
+        </div>
+        <div className="db-stat">
+          <b>{streak}</b>
+          <span>day streak</span>
+        </div>
+      </div>
+
       <div className="row" style={{ marginBottom: 20 }}>
         <button className="btn primary" onClick={() => setCreating(true)}>
           ⊕ Forge New Tome
@@ -39,41 +101,50 @@ export default function Dashboard() {
 
       <div className="grid-cards rise-1">
         {projects.map((p) => {
-          const words = p.chapters.reduce(
-            (sum, ch) => sum + ch.scenes.reduce((s, sc) => s + wordCount(sc.content), 0),
-            0,
-          )
+          const words = projectTotalWords(p)
+          const spark = lastNDays(dailyWordsForProject(p), 14)
           return (
             <div
               key={p.id}
-              className="card interactive"
+              className="card interactive db-card"
               onClick={() => open(p.id)}
               style={p.id === activeProjectId ? { borderColor: 'var(--ember)' } : undefined}
             >
-              <div className="row between">
-                <span className="tag brass">{p.genre || 'fiction'}</span>
-                {p.id === activeProjectId && <span className="tag ember">active</span>}
+              <div className="db-cover" style={coverStyle(p.name)}>
+                <span className="db-cover-initials">{initials(p.name)}</span>
               </div>
-              <h3 style={{ margin: '10px 0 6px' }}>{p.name}</h3>
-              <p className="muted" style={{ fontSize: 13.5, minHeight: 40 }}>
-                {p.logline || 'No logline yet.'}
-              </p>
-              <div className="divider" />
-              <div className="row between mono faint">
-                <span>
-                  {p.chapters.length} ch · {words.toLocaleString()} words
-                </span>
-                <button
-                  className="btn ghost small danger"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (confirm(`Delete "${p.name}" forever? This cannot be undone.`)) {
-                      deleteProject(p.id)
-                    }
-                  }}
-                >
-                  Delete
-                </button>
+              <div className="db-card-body">
+                <div className="row between">
+                  <span className="tag brass">{p.genre || 'fiction'}</span>
+                  {p.id === activeProjectId && <span className="tag ember">active</span>}
+                </div>
+                <h3 style={{ margin: '10px 0 6px' }}>{p.name}</h3>
+                <p className="muted" style={{ fontSize: 13.5, minHeight: 40 }}>
+                  {p.logline || 'No logline yet.'}
+                </p>
+                <div className="db-spark-row">
+                  <Sparkline values={spark} />
+                  <span className="mono faint">
+                    {p.chapters.length} ch · {words.toLocaleString()} words
+                  </span>
+                </div>
+                <div className="divider" style={{ margin: '14px 0 12px' }} />
+                <div className="row between">
+                  <button className="btn small" onClick={(e) => continueWriting(e, p)}>
+                    Continue writing →
+                  </button>
+                  <button
+                    className="btn ghost small danger"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (confirm(`Delete "${p.name}" forever? This cannot be undone.`)) {
+                        deleteProject(p.id)
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           )

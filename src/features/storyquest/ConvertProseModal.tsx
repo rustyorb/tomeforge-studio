@@ -42,7 +42,14 @@ export function ConvertProseModal(props: {
         setBusy(false)
       }
     })()
-    return () => controller.abort()
+    return () => {
+      // Release the once-guard: an aborted conversion was never delivered,
+      // so StrictMode's simulated unmount must not suppress the re-run.
+      controller.abort()
+      started.current = false
+      setText('')
+      setBusy(true)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

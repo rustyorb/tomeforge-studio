@@ -80,8 +80,16 @@ export function PlayView(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quest.log.length])
 
-  // Abort any in-flight stream when leaving the page.
-  useEffect(() => () => abortRef.current?.abort(), [])
+  // Abort any in-flight stream when leaving the page. An aborted opening
+  // narration was never delivered, so release the once-guard too — otherwise
+  // StrictMode's simulated unmount permanently suppresses the opening.
+  useEffect(
+    () => () => {
+      abortRef.current?.abort()
+      openingRequested.current = false
+    },
+    [],
+  )
 
   // Keep the adventure log scrolled to the newest turn.
   useEffect(() => {

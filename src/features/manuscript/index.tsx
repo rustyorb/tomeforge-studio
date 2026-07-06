@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ID, Project } from '../../types'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
-import { EmptyState } from '../../components/ui'
+import { EmptyState, ErrorBanner } from '../../components/ui'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 import { getPreset } from '../../lib/presets'
 import { uid } from '../../lib/id'
@@ -38,6 +38,7 @@ export default function ManuscriptPage() {
   const [overrides, setOverrides] = useState<GenOverrides>({ pacing: '', dialogueRatio: null })
   const [rewriteOpen, setRewriteOpen] = useState(false)
   const [replaceError, setReplaceError] = useState<string | null>(null)
+  const [acceptError, setAcceptError] = useState<string | null>(null)
 
   if (!project) {
     return (
@@ -68,6 +69,7 @@ export default function ManuscriptPage() {
   const runProse = (kind: ProseKind) => {
     if (!current) return
     setReplaceError(null)
+    setAcceptError(null)
     const system = buildSystem(buildDirective(kind, overrides))
     const user = userMessage(
       kind,
@@ -112,11 +114,18 @@ export default function ManuscriptPage() {
     if (!job) return
     const text = job.slots[i].text.trim()
     if (text) {
+      if (!findScene(project, job.sceneId)) {
+        setAcceptError(
+          'The source scene no longer exists — nothing was appended. Save the result as a branch instead.',
+        )
+        return
+      }
       mutate((d) => {
         const sc = sceneDraft(d, job.sceneId)
         if (sc) sc.content = appendToScene(sc.content, text)
       })
     }
+    setAcceptError(null)
     gen.dismissSlot(i)
   }
 
@@ -165,7 +174,9 @@ export default function ManuscriptPage() {
     mutate((d) => {
       const sc = sceneDraft(d, job.sceneId)
       if (!sc) return
-      sc.content = target === 'scene' ? text : sc.content.replace(original, text)
+      // Replacer function so `$&`/`$$` in generated prose aren't treated
+      // as replacement patterns.
+      sc.content = target === 'scene' ? text : sc.content.replace(original, () => text)
     })
     gen.dismiss()
     setRewriteOpen(false)
@@ -251,12 +262,15 @@ export default function ManuscriptPage() {
               </div>
 
               {gen.job && gen.job.kind !== 'rewrite' && (
-                <ResultPanels
-                  job={gen.job}
-                  onAccept={acceptSlot}
-                  onSaveBranch={saveBranch}
-                  onDiscard={gen.dismissSlot}
-                />
+                <>
+                  <ErrorBanner error={acceptError} />
+                  <ResultPanels
+                    job={gen.job}
+                    onAccept={acceptSlot}
+                    onSaveBranch={saveBranch}
+                    onDiscard={gen.dismissSlot}
+                  />
+                </>
               )}
 
               {showRewritePanel && (

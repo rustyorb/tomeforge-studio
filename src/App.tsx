@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { useActiveProject } from './store/useStore'
+import { STORAGE_EVENT, useActiveProject } from './store/useStore'
 import Dashboard from './features/dashboard'
 import Manuscript from './features/manuscript'
 import Brain from './features/brain'
@@ -55,11 +56,32 @@ function Nav() {
   )
 }
 
+/** Fixed warning shown while localStorage writes are failing (quota full). */
+function StorageWarning() {
+  const [failing, setFailing] = useState(false)
+  useEffect(() => {
+    const onEvent = (e: Event) => setFailing(!(e as CustomEvent<{ ok: boolean }>).detail.ok)
+    window.addEventListener(STORAGE_EVENT, onEvent)
+    return () => window.removeEventListener(STORAGE_EVENT, onEvent)
+  }, [])
+  if (!failing) return null
+  return (
+    <div
+      className="error-banner"
+      style={{ position: 'fixed', bottom: 14, right: 18, zIndex: 200, maxWidth: 420 }}
+    >
+      Browser storage is full — recent changes are <strong>not being saved</strong>. Copy your
+      work out or delete an old project, then keep writing.
+    </div>
+  )
+}
+
 export default function App() {
   const project = useActiveProject()
   return (
     <div className="app-shell">
       <Nav />
+      <StorageWarning />
       <main className="main-pane">
         <Routes>
           <Route path="/" element={<Dashboard />} />

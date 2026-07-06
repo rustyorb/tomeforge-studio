@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { Project, StyleProfile } from '../types'
 import { DEFAULT_STYLE_CONTROLS } from '../types'
@@ -23,6 +23,27 @@ interface Store {
   createStyleProfile: (name: string) => string
   updateStyleProfile: (id: string, recipe: (draft: StyleProfile) => void) => void
   deleteStyleProfile: (id: string) => void
+}
+
+/**
+ * localStorage wrapper that survives QuotaExceededError. zustand's persist
+ * writes synchronously on every set; without this, a manuscript that outgrows
+ * the ~5 MB quota makes every keystroke throw and silently stops persisting.
+ * Failures are broadcast so the UI can warn that changes aren't being saved.
+ * NOTE: must be declared before the store — createJSONStorage reads it eagerly.
+ */
+export const STORAGE_EVENT = 'tomeforge-storage'
+const safeLocalStorage = {
+  getItem: (key: string) => localStorage.getItem(key),
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value)
+      window.dispatchEvent(new CustomEvent(STORAGE_EVENT, { detail: { ok: true } }))
+    } catch {
+      window.dispatchEvent(new CustomEvent(STORAGE_EVENT, { detail: { ok: false } }))
+    }
+  },
+  removeItem: (key: string) => localStorage.removeItem(key),
 }
 
 export const useStore = create<Store>()(
@@ -117,7 +138,10 @@ export const useStore = create<Store>()(
           }
         }),
     })),
-    { name: 'tomeforge-projects' },
+    {
+      name: 'tomeforge-projects',
+      storage: createJSONStorage(() => safeLocalStorage),
+    },
   ),
 )
 

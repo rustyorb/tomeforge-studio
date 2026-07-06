@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { streamMessage } from '../../lib/ai'
 import { uid } from '../../lib/id'
 import type { ID } from '../../types'
@@ -51,6 +51,10 @@ export function useGeneration() {
   const abortRef = useRef<AbortController | null>(null)
 
   const busy = job !== null && job.slots.some((s) => s.busy)
+
+  // Abort in-flight streams when the page unmounts — otherwise navigating
+  // away leaves the API requests running with no way to recover the output.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const run = useCallback(
     (kind: GenKind, sceneId: ID, requests: StreamRequest[], rewrite?: RewriteMeta) => {

@@ -30,16 +30,28 @@ export default function ShortcutsHelp() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === '/') {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === '/') {
         e.preventDefault()
         setOpen((o) => !o)
-      } else if (e.key === 'Escape') {
-        setOpen(false)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // Esc consumes the key in capture phase ONLY while open, so lower layers
+  // (Focus Mode's exit listener) don't also react to the same press.
+  useEffect(() => {
+    if (!open) return
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      setOpen(false)
+    }
+    window.addEventListener('keydown', onEsc, { capture: true })
+    return () => window.removeEventListener('keydown', onEsc, { capture: true })
+  }, [open])
 
   if (!open) return null
   return (

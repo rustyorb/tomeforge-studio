@@ -59,7 +59,12 @@ export default function ManuscriptPage() {
       sessionStorage.removeItem('tf-select-scene')
       setSelectedSceneId(stored)
     }
-    const onEvent = (e: Event) => setSelectedSceneId((e as CustomEvent<string>).detail)
+    const onEvent = (e: Event) => {
+      // Consume the storage copy too — dispatchers write both, and a stale
+      // key would hijack scene selection on the next mount.
+      sessionStorage.removeItem('tf-select-scene')
+      setSelectedSceneId((e as CustomEvent<string>).detail)
+    }
     window.addEventListener('tf-select-scene', onEvent)
     return () => window.removeEventListener('tf-select-scene', onEvent)
   }, [])
@@ -221,6 +226,15 @@ export default function ManuscriptPage() {
         'The original passage was not found in the scene (it may have been edited since). Nothing was replaced.',
       )
       return
+    }
+    if (target === 'passage') {
+      const occurrences = source.scene.content.split(original).length - 1
+      if (occurrences > 1) {
+        setReplaceError(
+          `That passage appears ${occurrences} times in the scene — include more surrounding text so the right one is replaced. Nothing was replaced.`,
+        )
+        return
+      }
     }
     useStore.getState().snapshotScene(project.id, job.sceneId, 'Before rewrite')
     mutate((d) => {

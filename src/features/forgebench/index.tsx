@@ -67,7 +67,12 @@ export default function ForgebenchPage() {
       sessionStorage.removeItem('tf-open-tool')
       open(stored)
     }
-    const onEvent = (e: Event) => open((e as CustomEvent<string>).detail)
+    const onEvent = (e: Event) => {
+      // Consume the storage copy too — dispatchers write both, and a stale
+      // key would replay the old deep link on the next mount.
+      sessionStorage.removeItem('tf-open-tool')
+      open((e as CustomEvent<string>).detail)
+    }
     window.addEventListener('tf-open-tool', onEvent)
     return () => window.removeEventListener('tf-open-tool', onEvent)
   }, [])

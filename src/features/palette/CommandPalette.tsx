@@ -84,7 +84,8 @@ export default function CommandPalette() {
   // Global open/close triggers — attached once, cleaned up.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+      // Shift excluded: Ctrl+Shift+K is a browser devtools shortcut.
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault()
         setOpen((o) => !o)
       }
@@ -239,12 +240,15 @@ export default function CommandPalette() {
   }, [query])
 
   // Keyboard navigation while open. Only special keys are intercepted —
-  // plain typing goes to the input untouched.
+  // plain typing goes to the input untouched. Capture phase + stopPropagation:
+  // the palette is the topmost layer, so lower layers with their own window
+  // listeners (Focus Mode's Esc, ShortcutsHelp) must never see handled keys.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
+        e.stopPropagation()
         setOpen(false)
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -254,11 +258,12 @@ export default function CommandPalette() {
         setHighlight((h) => Math.max(h - 1, 0))
       } else if (e.key === 'Enter') {
         e.preventDefault()
+        e.stopPropagation()
         flat[highlight]?.run()
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
   }, [open, flat, highlight])
 
   // Keep the highlighted row visible.

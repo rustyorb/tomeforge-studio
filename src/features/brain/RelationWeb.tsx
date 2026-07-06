@@ -128,6 +128,7 @@ function parseWeb(raw: unknown): { nodes: CastWebNode[]; edges: CastWebEdge[] } 
     const { from, to, label, tone } = item as Record<string, unknown>
     if (typeof from !== 'string' || typeof to !== 'string') continue
     if (!seen.has(from) || !seen.has(to)) continue
+    if (from === to) continue // self-edges render as a label stacked on the node
     edges.push({
       from,
       to,
@@ -172,6 +173,11 @@ export default function RelationWeb(props: {
   useEffect(() => {
     if (!dragId) return
     const onMove = (e: PointerEvent) => {
+      if (e.buttons === 0) {
+        // Button already released (e.g. outside the window) — drop the drag.
+        setDragId(null)
+        return
+      }
       const svg = svgRef.current
       if (!svg) return
       const rect = svg.getBoundingClientRect()
@@ -189,14 +195,24 @@ export default function RelationWeb(props: {
     const onUp = () => setDragId(null)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    // A release outside the window arrives as pointercancel (touch) or not at
+    // all (mouse re-entering without buttons) — blur covers the rest, so the
+    // node never stays glued to the cursor.
+    window.addEventListener('pointercancel', onUp)
+    window.addEventListener('blur', onUp)
     return () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('blur', onUp)
     }
   }, [dragId])
 
-  // Abort any in-flight weave on unmount.
-  useEffect(() => () => abortRef.current?.abort(), [])
+  // Deliberately NO abort-on-unmount: a weave is a long, paid generation, and
+  // toggling Cards/Web or switching Brain tabs unmounts this component. The
+  // stream keeps running and the finished web is saved to the store via
+  // updateProject; post-unmount setState calls are React 18 no-ops. Only the
+  // explicit Stop button aborts.
 
   const stop = () => abortRef.current?.abort()
 

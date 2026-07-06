@@ -51,8 +51,11 @@ function ProviderPanel() {
     try {
       const ids = await fetchModels(provider)
       updateProvider(provider, { models: ids })
-      // If no model chosen yet, default to the first fetched one.
-      if (!conf.model && ids.length) updateProvider(provider, { model: ids[0] })
+      // If no model chosen yet, default to the first fetched one. Read fresh
+      // state — the render-time conf is stale if the user typed a model id
+      // while the fetch was in flight.
+      const fresh = useSettings.getState().providers[provider]
+      if (!fresh?.model && ids.length) updateProvider(provider, { model: ids[0] })
     } catch (e) {
       setFetchError(e instanceof Error ? e.message : String(e))
     } finally {

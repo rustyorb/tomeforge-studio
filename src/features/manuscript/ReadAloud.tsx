@@ -74,12 +74,15 @@ export default function ReadAloud(props: { text: string; sceneId: ID }) {
     return () => window.speechSynthesis.removeEventListener('voiceschanged', load)
   }, [])
 
-  // Cancel speech on scene switch and on unmount.
+  // Cancel speech on scene switch and on unmount. resume() after cancel():
+  // cancel() empties the queue but does NOT clear the engine's global paused
+  // flag — without resume(), the next speak() plays into a paused engine.
   useEffect(() => {
     if (!supported) return
     return () => {
       sessionRef.current++
       window.speechSynthesis.cancel()
+      window.speechSynthesis.resume()
       setStatus('idle')
     }
   }, [props.sceneId])
@@ -113,6 +116,7 @@ export default function ReadAloud(props: { text: string; sceneId: ID }) {
     if (chunks.length === 0) return
     sessionRef.current++
     window.speechSynthesis.cancel()
+    window.speechSynthesis.resume() // clear any lingering paused flag
     setStatus('playing')
     speakFrom(chunks, 0, sessionRef.current)
   }
@@ -125,6 +129,7 @@ export default function ReadAloud(props: { text: string; sceneId: ID }) {
   const stop = () => {
     sessionRef.current++
     window.speechSynthesis.cancel()
+    window.speechSynthesis.resume() // clear any lingering paused flag
     setStatus('idle')
   }
 

@@ -44,6 +44,61 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+const asString = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback)
+
+/**
+ * Coerce a validated-but-possibly-incomplete project into a fully-formed
+ * Project. Backups trimmed by hand or produced by older/third-party tools may
+ * omit the codex/characters/threads/timeline/branches arrays; without this,
+ * pages that map over them crash the whole app (and re-crash on every reload,
+ * since the bad project is persisted). Every field gets a safe default.
+ */
+function normalizeProject(p: Record<string, unknown>): Project {
+  const chapters = asArray(p.chapters).map((ch) => {
+    const c = isRecord(ch) ? ch : {}
+    return {
+      id: asString(c.id) || Math.random().toString(36).slice(2, 10),
+      title: asString(c.title, 'Untitled Chapter'),
+      scenes: asArray(c.scenes).map((sc) => {
+        const s = isRecord(sc) ? sc : {}
+        return {
+          id: asString(s.id) || Math.random().toString(36).slice(2, 10),
+          title: asString(s.title, 'Untitled Scene'),
+          content: asString(s.content),
+          summary: typeof s.summary === 'string' ? s.summary : undefined,
+          snapshots: Array.isArray(s.snapshots) ? (s.snapshots as never) : undefined,
+        }
+      }),
+    }
+  })
+  const canonModes = ['loose', 'guided', 'strict', 'sandbox']
+  return {
+    id: asString(p.id),
+    name: asString(p.name, 'Untitled'),
+    genre: asString(p.genre),
+    logline: asString(p.logline),
+    createdAt: typeof p.createdAt === 'number' ? p.createdAt : Date.now(),
+    updatedAt: typeof p.updatedAt === 'number' ? p.updatedAt : Date.now(),
+    chapters,
+    memory: asString(p.memory),
+    authorNote: asString(p.authorNote),
+    canonMode: (canonModes.includes(p.canonMode as string) ? p.canonMode : 'guided') as Project['canonMode'],
+    codex: asArray(p.codex) as never,
+    characters: asArray(p.characters) as never,
+    threads: asArray(p.threads) as never,
+    timeline: asArray(p.timeline) as never,
+    notes: asString(p.notes),
+    styleProfileId: typeof p.styleProfileId === 'string' ? p.styleProfileId : null,
+    presetId: asString(p.presetId, 'clean-continuation'),
+    quest: isRecord(p.quest) ? (p.quest as never) : null,
+    branches: asArray(p.branches) as never,
+    castWeb: isRecord(p.castWeb) ? (p.castWeb as never) : null,
+    wordLog: isRecord(p.wordLog) ? (p.wordLog as never) : undefined,
+    wordLogStart: typeof p.wordLogStart === 'number' ? p.wordLogStart : undefined,
+  }
+}
+
 /**
  * Parse and validate backup JSON. Returns the projects and style profiles
  * it contains, or throws a descriptive Error explaining what is wrong.
@@ -107,7 +162,8 @@ export function parseBackup(text: string): BackupPayload {
   })
 
   return {
-    projects: data.projects as unknown as Project[],
+    // Normalize so trimmed/legacy projects can't crash pages after import.
+    projects: (data.projects as Record<string, unknown>[]).map(normalizeProject),
     styleProfiles: rawProfiles as unknown as StyleProfile[],
   }
 }

@@ -35,7 +35,11 @@ export function dailyWordsForProject(project: Project): Record<string, number> {
   if (!log) return {}
   const days = Object.keys(log).sort()
   const out: Record<string, number> = {}
-  let runningMax = 0
+  // Seed the running max with the tracking baseline so a pre-existing
+  // manuscript isn't dumped onto its first logged day. Legacy projects with
+  // no baseline fall back to their first observed day (which then reads 0),
+  // which still avoids the spike.
+  let runningMax = project.wordLogStart ?? (days.length ? (log[days[0]] ?? 0) : 0)
   for (const day of days) {
     const total = log[day] ?? 0
     out[day] = Math.max(0, total - runningMax)

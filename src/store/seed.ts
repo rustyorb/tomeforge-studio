@@ -150,6 +150,8 @@ export function seedProject(): Project {
     presetId: 'slow-burn',
     quest: null,
     branches: [],
+    // Seed prose already exists; count it as baseline, not "written today".
+    wordLogStart: 127,
   }
 }
 

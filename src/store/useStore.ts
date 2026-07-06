@@ -110,6 +110,7 @@ export const useStore = create<Store>()(
             threads: [],
             timeline: [],
             notes: '',
+            wordLogStart: 0,
             styleProfileId: null,
             presetId: 'clean-continuation',
             quest: null,

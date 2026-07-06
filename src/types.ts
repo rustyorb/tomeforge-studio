@@ -228,6 +228,12 @@ export interface Project {
    * observed that day. Words written on day D = wordLog[D] - max(earlier days).
    */
   wordLog?: Record<string, number>
+  /**
+   * Baseline word total captured when tracking began, so a pre-existing
+   * manuscript's back-catalog isn't counted as "written" on the first logged
+   * day. 0 for projects created after tracking existed.
+   */
+  wordLogStart?: number
 }
 
 export interface Preset {

@@ -23,12 +23,15 @@ function dateStamp(): string {
 
 /** Replace collided ids, append new ones, never drop existing items. */
 function mergeById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
+  // Map dedupes incoming ids too (last wins), so a backup that repeats an id
+  // can't insert two items with the same id.
   const incomingById = new Map(incoming.map((item) => [item.id, item]))
   const existingIds = new Set(existing.map((item) => item.id))
-  return [
-    ...existing.map((item) => incomingById.get(item.id) ?? item),
-    ...incoming.filter((item) => !existingIds.has(item.id)),
-  ]
+  const merged = existing.map((item) => incomingById.get(item.id) ?? item)
+  for (const [id, item] of incomingById) {
+    if (!existingIds.has(id)) merged.push(item)
+  }
+  return merged
 }
 
 /** Word count that tolerates imported data with odd scene content. */

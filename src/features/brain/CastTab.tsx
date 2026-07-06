@@ -87,7 +87,12 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
         if (!target) return
         for (const key of SYNC_KEYS) {
           const value = obj[key]
-          if (typeof value === 'string') target[key] = value
+          // Only apply the AI value if the user hasn't edited this field while
+          // the sync was in flight — their live edit always wins over a result
+          // computed from the pre-edit card.
+          if (typeof value === 'string' && target[key] === currentState[key]) {
+            target[key] = value
+          }
         }
       })
     } catch (e) {

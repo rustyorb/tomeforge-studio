@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { STORAGE_EVENT, useActiveProject } from './store/useStore'
+import { STORAGE_EVENT, useActiveProject, useStore } from './store/useStore'
 import { useSettings } from './store/useSettings'
 import CommandPalette, { OPEN_PALETTE_EVENT } from './features/palette/CommandPalette'
 import ShortcutsHelp from './features/palette/ShortcutsHelp'
@@ -97,12 +97,25 @@ function StorageWarning() {
 export default function App() {
   const project = useActiveProject()
   const theme = useSettings((s) => s.theme)
+  const projects = useStore((s) => s.projects)
+  const setActiveProject = useStore((s) => s.setActiveProject)
 
   // Themes override CSS custom properties via [data-theme] on <html>.
   // 'ember' is the :root default, so the attribute is redundant but harmless.
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  // Auto-select the most recently touched tome whenever none is active (fresh
+  // load, or after the active one was deleted). Without this the workshop nav
+  // sits greyed out even though a project is right there. Only a truly empty
+  // archive leaves the workshop disabled.
+  useEffect(() => {
+    if (!project && projects.length) {
+      const mostRecent = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)[0]
+      setActiveProject(mostRecent.id)
+    }
+  }, [project, projects, setActiveProject])
 
   return (
     <div className="app-shell">

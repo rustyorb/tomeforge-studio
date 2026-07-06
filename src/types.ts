@@ -189,6 +189,15 @@ export interface CastWeb {
   generatedAt: number
 }
 
+/** A saved StoryQuest timeline branch — full quest state frozen at a moment */
+export interface QuestSave {
+  id: ID
+  name: string
+  note: string
+  createdAt: number
+  quest: QuestState
+}
+
 export interface Branch {
   id: ID
   name: string
@@ -220,6 +229,8 @@ export interface Project {
   styleProfileId: ID | null
   presetId: string
   quest: QuestState | null
+  /** Saved StoryQuest branches ("what if…" timelines) */
+  questSaves?: QuestSave[]
   branches: Branch[]
   /** Relationship graph woven by AI, cached until regenerated */
   castWeb?: CastWeb | null

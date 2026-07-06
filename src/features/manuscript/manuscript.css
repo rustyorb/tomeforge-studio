@@ -1,0 +1,244 @@
+/* Manuscript workspace — additions scoped with ms- prefix. */
+
+.ms-layout {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.ms-side {
+  position: sticky;
+  top: 0;
+}
+
+.ms-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ---- Scene tree ---- */
+
+.ms-chapter { margin-bottom: 10px; }
+
+.ms-chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+}
+
+.ms-chapter-title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--brass);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-scene {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px 5px 14px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  color: var(--parchment-dim);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ms-scene:hover { background: var(--ink-2); color: var(--parchment); }
+.ms-scene.active {
+  color: var(--ember-bright);
+  background: var(--ember-dim);
+  border-color: rgba(224, 118, 58, 0.25);
+}
+
+.ms-scene-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-icon-btn {
+  background: none;
+  border: none;
+  color: var(--parchment-faint);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.ms-scene:hover .ms-icon-btn,
+.ms-chapter-head:hover .ms-icon-btn { opacity: 0.8; }
+.ms-icon-btn:hover { color: var(--ember-bright); background: var(--ink-3); opacity: 1; }
+
+input.ms-rename-input {
+  font-size: 13px;
+  padding: 3px 7px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Editor ---- */
+
+input.ms-title-input {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 2px 0;
+  color: var(--parchment);
+  width: 100%;
+}
+input.ms-title-input:focus {
+  border: none;
+  box-shadow: 0 1px 0 var(--ember);
+}
+
+/* ---- Toolbar ---- */
+
+.ms-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.ms-control {
+  margin-bottom: 0;
+  min-width: 170px;
+  flex: 0 1 auto;
+}
+
+.ms-check-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.ms-check-label input[type='checkbox'] { accent-color: var(--ember); cursor: pointer; }
+
+.ms-locks {
+  margin-left: auto;
+  align-self: center;
+}
+
+.ms-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  color: var(--parchment-dim);
+  cursor: pointer;
+}
+.ms-radio input[type='radio'] { accent-color: var(--ember); cursor: pointer; }
+
+/* ---- Chapter tools dropdown ---- */
+
+.ms-menu-wrap { position: relative; }
+
+.ms-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.ms-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--ink-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.ms-menu > button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--parchment);
+  font-family: var(--font-prose);
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.ms-menu > button:hover { background: var(--ink-2); color: var(--ember-bright); }
+.ms-menu .ms-menu-note {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--parchment-faint);
+}
+
+/* ---- Generation results ---- */
+
+.ms-forks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ms-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ms-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* ---- Branch vault ---- */
+
+.ms-branch {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--ink-2);
+}
+
+.ms-branch-toggle {
+  background: none;
+  border: none;
+  color: var(--parchment);
+  font-family: var(--font-display);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+.ms-branch-toggle:hover { color: var(--ember-bright); }
+
+@media (max-width: 1100px) {
+  .ms-forks { grid-template-columns: 1fr; }
+  .ms-compare { grid-template-columns: 1fr; }
+}

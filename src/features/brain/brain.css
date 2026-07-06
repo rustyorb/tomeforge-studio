@@ -1,0 +1,134 @@
+/* Story Brain module — extra styles (prefix br-) */
+
+/* Canon Lock option cards */
+.br-canon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.br-canon-card {
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.br-canon-card.br-selected {
+  border-color: var(--ember);
+  background: linear-gradient(180deg, rgba(224, 118, 58, 0.1), var(--ink-1));
+}
+.br-canon-card .br-canon-desc {
+  font-size: 12.5px;
+  color: var(--parchment-dim);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* Codex split layout */
+.br-split {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .br-split { grid-template-columns: 1fr; }
+}
+
+.br-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.br-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--parchment-dim);
+  font-family: var(--font-prose);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.br-list-item:hover { background: var(--ink-2); color: var(--parchment); }
+.br-list-item.br-active {
+  border-color: rgba(224, 118, 58, 0.35);
+  background: var(--ember-dim);
+  color: var(--ember-bright);
+}
+.br-list-item .br-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.br-pin { color: var(--brass); flex-shrink: 0; }
+
+/* Checkbox row */
+.br-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--parchment-dim);
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.br-check input[type='checkbox'] {
+  width: auto;
+  accent-color: var(--ember);
+  cursor: pointer;
+}
+
+/* Cast card snippets */
+.br-snippet {
+  font-size: 13px;
+  color: var(--parchment-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.br-snippet .br-snippet-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-faint);
+  margin-right: 6px;
+}
+
+/* Threadmap */
+.br-thread-group { margin-bottom: 26px; }
+.br-thread-group > .br-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.br-thread-stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* Chronicle */
+.br-chron-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.br-order-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+  padding-top: 22px;
+}
+.br-chron-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0 12px;
+  flex: 1;
+}
+.br-chron-grid .field { margin-bottom: 10px; }

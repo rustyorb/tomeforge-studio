@@ -1,0 +1,128 @@
+/* ---------- Forgebench: the wall of forge implements ---------- */
+
+.fb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.fb-search {
+  flex: 1;
+  max-width: 380px;
+}
+.fb-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--parchment-faint);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* Tool grid — a wall of implements: tighter cards, glyph forward */
+.fb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.fb-tool-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 15px 13px;
+  background: linear-gradient(180deg, var(--ink-2), var(--ink-1));
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.fb-tool-card:hover {
+  border-color: var(--brass);
+  transform: translateY(-1px);
+}
+.fb-tool-card.active {
+  border-color: var(--ember);
+  box-shadow: 0 0 14px rgba(224, 118, 58, 0.18);
+}
+
+.fb-glyph {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--brass);
+  text-shadow: 0 0 14px rgba(201, 163, 92, 0.35);
+}
+.fb-tool-card:hover .fb-glyph,
+.fb-tool-card.active .fb-glyph {
+  color: var(--ember-bright);
+  text-shadow: 0 0 16px rgba(224, 118, 58, 0.4);
+}
+
+.fb-tool-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 550;
+  color: var(--parchment);
+}
+.fb-tool-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--parchment-faint);
+}
+.fb-tool-cat {
+  margin-top: auto;
+  padding-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--parchment-faint);
+  opacity: 0.75;
+}
+
+/* ---------- Runner ---------- */
+
+.fb-runner {
+  border-color: var(--line);
+}
+.fb-runner .fb-runner-glyph {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: var(--brass);
+  text-shadow: 0 0 16px rgba(201, 163, 92, 0.35);
+}
+.fb-runner-title h2 {
+  margin: 0;
+  line-height: 1.15;
+}
+.fb-runner-title .fb-tool-desc {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.fb-fields {
+  max-width: 720px;
+}
+
+.fb-fill-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.fb-output-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fb-saved-note {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--verdigris);
+  letter-spacing: 0.06em;
+}

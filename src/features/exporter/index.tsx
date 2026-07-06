@@ -148,7 +148,7 @@ export default function ExporterPage() {
     <div className="page">
       <header className="page-header rise">
         <div className="kicker">The Bindery</div>
-        <h1>Export &amp; Backup</h1>
+        <h1>Import &amp; Export</h1>
         <p className="sub">
           Bind your manuscript into an e-book, a printable page, or plain files — and keep the
           whole forge safe with portable JSON backups that restore on any machine.

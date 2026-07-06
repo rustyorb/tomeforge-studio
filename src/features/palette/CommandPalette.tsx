@@ -16,7 +16,7 @@ const PAGES: { to: string; glyph: string; name: string; keywords: string }[] = [
   { to: '/quest', glyph: '⚔', name: 'StoryQuest', keywords: 'adventure rpg play game' },
   { to: '/voiceprint', glyph: '❦', name: 'Voiceprint', keywords: 'style voice profile' },
   { to: '/insights', glyph: '◍', name: 'Insights', keywords: 'stats analytics words observatory' },
-  { to: '/export', glyph: '⇲', name: 'Export & Backup', keywords: 'download markdown backup save' },
+  { to: '/export', glyph: '⇲', name: 'Import & Export', keywords: 'download markdown backup save import sillytavern epub' },
   { to: '/settings', glyph: '⚙', name: 'Settings', keywords: 'api key provider model theme appearance' },
 ]
 

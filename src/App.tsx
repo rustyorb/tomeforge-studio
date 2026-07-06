@@ -50,7 +50,7 @@ function Nav() {
 
       <div className="nav-section">Observatory</div>
       {link('/insights', '◍', 'Insights')}
-      {link('/export', '⇲', 'Export & Backup')}
+      {link('/export', '⇲', 'Import & Export')}
 
       <div className="nav-section">System</div>
       {link('/settings', '⚙', 'Settings')}

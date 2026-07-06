@@ -1114,6 +1114,437 @@ const publishingTools: ForgeTool[] = [
   },
 ]
 
+// ============================================================
+// EXPANSION — the road to 100
+// ============================================================
+
+const expansionTools: ForgeTool[] = [
+  // ---- idea ----
+  {
+    id: 'opening-line-generator',
+    name: 'Opening Line Generator',
+    category: 'idea',
+    glyph: '✒',
+    description: 'Ten first lines that make putting the book down impossible.',
+    temperature: 1.0,
+    fields: [seedField('What the story is about — or leave blank to use the project logline')],
+    buildDirective: () =>
+      'Write exactly 10 opening lines for this story, each a complete first sentence. ' +
+      'Vary the register: one voice-forward, one image, one mid-action, one unsettling statement of fact, one dialogue, one aphorism turned wrong, and four wildcards. ' +
+      'Numbered 1-10, nothing after each line. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'dramatic-question-engine',
+    name: 'Dramatic Question Engine',
+    category: 'idea',
+    glyph: '⁈',
+    description: 'The questions a reader needs answered — engine of every page-turn.',
+    fields: [seedField('Premise or situation — or leave blank to use the Story Brain')],
+    buildDirective: () =>
+      'Identify the dramatic questions this story raises. Output three labeled tiers: ' +
+      'CENTRAL QUESTION (the one the ending must answer), ACT QUESTIONS (2-3 that structure the middle), SCENE FUEL (5 smaller questions that can each drive a chapter). ' +
+      'One line each, phrased as questions a reader would actually feel. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+  {
+    id: 'constraint-forge',
+    name: 'Constraint Forge',
+    category: 'idea',
+    glyph: '⛓',
+    description: 'Creative constraints that squeeze better work out of you.',
+    temperature: 1.1,
+    fields: [
+      { id: 'target', label: 'Constrain what?', type: 'select', options: ['a scene', 'a chapter', 'a short story', 'the whole novel'] },
+    ],
+    buildDirective: (v) =>
+      `Generate 8 creative constraints for writing ${v.target ?? 'a scene'}, in the spirit of Oulipo and writing-room dares. ` +
+      'Mix types: structural (form, POV, time), linguistic (banned words, sentence rules), dramatic (what must/may not happen). ' +
+      'Each: the constraint in one bold sentence, then one line on why it forces better craft. Numbered 1-8. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'comp-titles',
+    name: 'Comp Titles Finder',
+    category: 'idea',
+    glyph: '≍',
+    description: '"X meets Y" comparables agents and readers instantly get.',
+    fields: [seedField('Premise — or leave blank to use the Story Brain')],
+    buildDirective: () =>
+      'Propose comparable titles for this story. Output: 5 "X meets Y" pairings (mix books, films, series; one line each on what the pairing captures), ' +
+      'then 3 straight comps from the last decade with one line on the shared audience, then one line naming the shelf this book lives on. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+
+  // ---- plot ----
+  {
+    id: 'midpoint-reversal',
+    name: 'Midpoint Reversal Generator',
+    category: 'plot',
+    glyph: '↯',
+    description: 'The turn that makes the second half a different story.',
+    fields: [seedField('Where the story stands at the middle — or leave blank to use the Story Brain')],
+    buildDirective: () =>
+      'Propose 5 midpoint reversals for this story. For each: THE TURN (one sentence), WHAT IT REVEALS (a truth that recontextualizes act one), ' +
+      'WHAT IT COSTS (the thing the protagonist can no longer do or believe), and NEW ENGINE (what now drives the second half). ' +
+      'Separate with blank lines. Make at least one reversal quiet rather than explosive. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+  {
+    id: 'subplot-weaver',
+    name: 'Subplot Weaver',
+    category: 'plot',
+    glyph: '⧉',
+    description: 'Subplots that echo the theme instead of padding the page count.',
+    fields: [],
+    buildDirective: () =>
+      'Design 4 subplots for this story. For each: NAME, WHO CARRIES IT (prefer existing cast), the ARC in three beats, HOW IT ECHOES the main theme (mirror, inversion, or escalation), and WHERE IT TOUCHES the main plot (two concrete intersection points). ' +
+      'A subplot that could be cut without loss is a failure — make each one load-bearing. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+  {
+    id: 'stakes-escalator',
+    name: 'Stakes Escalator',
+    category: 'plot',
+    glyph: '⇞',
+    description: 'A ladder of rising stakes from bruised pride to the unthinkable.',
+    fields: [seedField('The current conflict — or leave blank to use the Story Brain')],
+    buildDirective: () =>
+      'Build a stakes ladder for this story: 7 rungs, each raising what can be lost. ' +
+      'Rung 1 is where the story currently stands; rung 7 is the worst credible loss (keep it inside the story\'s scale — intimate stories deserve intimate rung-7s). ' +
+      'Each rung: one sentence of what is now at risk + one sentence of the event that could raise the stakes to the next rung. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+  {
+    id: 'chekhov-auditor',
+    name: 'Chekhov Auditor',
+    category: 'plot',
+    glyph: '⚷',
+    description: 'Every gun on every mantle — planted elements awaiting their shot.',
+    temperature: 0.4,
+    fields: [],
+    buildDirective: () =>
+      'Audit the manuscript for Chekhov elements: objects, skills, wounds, promises, and facts given narrative weight that have not yet paid off. ' +
+      'Output a table-like list: ELEMENT — WHERE PLANTED (chapter/scene) — WEIGHT (how loaded the planting felt, 1-3 🜂) — SUGGESTED PAYOFF (one sentence). ' +
+      'End with any tracked plot threads that look abandoned. ' + NO_PREAMBLE,
+    projectPayload: (p) => [manuscriptBlock(p, 12000), threadsBlock(p)].join('\n\n'),
+  },
+  {
+    id: 'ticking-clock',
+    name: 'Ticking Clock Generator',
+    category: 'plot',
+    glyph: '⌛',
+    description: 'Deadlines and countdowns that turn tension into dread.',
+    fields: [seedField('The situation that needs time pressure')],
+    buildDirective: () =>
+      'Design 5 ticking clocks for this situation. For each: THE CLOCK (what runs out), THE DEADLINE (when and why it\'s fixed), VISIBLE TICKS (2-3 ways the reader feels time passing on the page), and AT ZERO (the irreversible consequence). ' +
+      'Vary the scales: one physical, one social, one emotional, one hidden-from-the-protagonist, one wildcard. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+
+  // ---- character ----
+  {
+    id: 'foil-designer',
+    name: 'Foil Designer',
+    category: 'character',
+    glyph: '☯',
+    description: 'Characters who reveal your protagonist by contrast.',
+    fields: [
+      { id: 'who', label: 'Foil for whom?', type: 'text', placeholder: 'Character name (from the Cast Ledger)' },
+    ],
+    buildDirective: (v) =>
+      `Design 3 possible foil characters for ${v.who || 'the protagonist'}. ` +
+      'For each: NAME & ROLE, THE SHARED TRAIT (what makes comparison inevitable), THE DIVERGENCE (the one different choice or value), ' +
+      'WHAT THE CONTRAST EXPOSES about the protagonist that no other device could, and ONE SCENE that would stage the contrast. ' +
+      'Prefer foils who could also carry a subplot. ' + NO_PREAMBLE,
+    projectPayload: (p) => castBlock(p),
+  },
+  {
+    id: 'flaw-generator',
+    name: 'Fatal Flaw Generator',
+    category: 'character',
+    glyph: '☒',
+    description: 'Flaws wired to the arc — the crack the story pries open.',
+    fields: [
+      { id: 'who', label: 'Whose flaw?', type: 'text', placeholder: 'Character name, or blank for a new character' },
+    ],
+    buildDirective: (v) =>
+      `Generate 5 fatal flaws${v.who ? ` for ${v.who}` : ''}. ` +
+      'For each: THE FLAW (one phrase — a distortion of a virtue, not a vice), ITS ROOT (the wound or lesson that installed it), HOW IT HELPS (why they keep it), ' +
+      'HOW IT WILL BETRAY THEM (the story moment where it costs everything), and THE CURE\'S PRICE (what facing it would cost). ' + NO_PREAMBLE,
+    projectPayload: (p) => castBlock(p),
+  },
+  {
+    id: 'minor-spotlight',
+    name: 'Minor Character Spotlight',
+    category: 'character',
+    glyph: '✧',
+    description: 'Give a walk-on part a whole life in four sentences.',
+    fields: [
+      { id: 'who', label: 'Which minor character?', type: 'text', placeholder: 'The innkeeper, the border guard, the sister who calls…' },
+    ],
+    buildDirective: (v) =>
+      `Bring the minor character "${v.who || 'a walk-on from the recent pages'}" briefly, vividly to life. ` +
+      'Output: a four-sentence interior portrait (what they want today, what they notice, what they will never say), ' +
+      'ONE TELL (a physical habit the narrator could observe), ONE LINE of dialogue only they would say, and ONE SECRET connection to the main plot the author may ignore or use. ' + NO_PREAMBLE,
+    projectPayload: (p) => [manuscriptBlock(p, 6000), castBlock(p)].join('\n\n'),
+  },
+  {
+    id: 'name-forge',
+    name: 'Name Forge',
+    category: 'character',
+    glyph: '✍',
+    description: 'Names with texture — sound, meaning, and nickname potential.',
+    temperature: 1.0,
+    fields: [
+      { id: 'kind', label: 'Naming', type: 'select', options: ['a character', 'a family/house', 'a place', 'a ship/vessel', 'an organization'] },
+      { id: 'flavor', label: 'Cultural flavor / sound', type: 'text', placeholder: 'e.g. Norse-adjacent, Meiji Japan, decayed Latin, invented' },
+    ],
+    buildDirective: (v) =>
+      `Generate 12 names for ${v.kind ?? 'a character'}${v.flavor ? ` with a ${v.flavor} flavor` : ' fitting this project\'s world'}. ` +
+      'For each: the name, a syllable-stress note in brackets, the meaning or association it carries, and (for characters) the nickname it decays into among friends. ' +
+      'No two names may share a first letter more than twice. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'secret-generator',
+    name: 'Secret Generator',
+    category: 'character',
+    glyph: '⚿',
+    description: 'Secrets worth keeping — and the moments they should detonate.',
+    fields: [
+      { id: 'who', label: 'Whose secret?', type: 'text', placeholder: 'Character name, or blank to spread across the cast' },
+    ],
+    buildDirective: (v) =>
+      `Generate 6 secrets${v.who ? ` ${v.who} could be keeping` : ' distributed across this cast'}. ` +
+      'For each: THE SECRET (one sentence), WHO MUST NEVER KNOW and why, THE COST OF KEEPING IT (daily, corrosive), THE PERFECT REVEAL MOMENT (worst possible timing), and THE LIE it forces them to tell on the page before then. ' +
+      'At least one secret should be kept out of love rather than shame. ' + NO_PREAMBLE,
+    projectPayload: (p) => castBlock(p),
+  },
+
+  // ---- dialogue ----
+  {
+    id: 'dialect-designer',
+    name: 'Dialect & Speech Pattern Designer',
+    category: 'dialogue',
+    glyph: '¿',
+    description: 'A voice fingerprint: rhythm, vocabulary, and verbal tics.',
+    fields: [
+      { id: 'who', label: 'For whom?', type: 'text', placeholder: 'Character name or archetype' },
+      seedField('Background: region, class, education, era, trauma…'),
+    ],
+    buildDirective: (v) =>
+      `Design a speech pattern for ${v.who || 'this character'}. Output labeled sections: ` +
+      'RHYTHM (sentence length and music), VOCABULARY (five words they overuse, five they would never use), GRAMMAR QUIRKS (2-3, subtle — readable, never phonetic spelling), ' +
+      'EVASIONS (how they dodge questions), UNDER PRESSURE (how the pattern breaks when stressed), and a 6-line SAMPLE EXCHANGE demonstrating all of it against a neutral speaker. ' + NO_PREAMBLE,
+    projectPayload: (p) => castBlock(p),
+  },
+  {
+    id: 'interruption-pass',
+    name: 'Interruption Pass',
+    category: 'dialogue',
+    glyph: '—',
+    description: 'Real conversations overlap — make the dialogue fight for air.',
+    temperature: 0.6,
+    fields: [pasteField('Dialogue to roughen up')],
+    buildDirective: () =>
+      'Rewrite this dialogue so it breathes like a real conversation: interruptions (em-dash cuts), talked-over half-lines, unanswered questions, a beat where someone replies to the thing said two lines ago. ' +
+      'Preserve every plot fact and the scene\'s outcome. Do not add narration beyond minimal beats. Output only the rewritten passage. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'first-meeting',
+    name: 'First Meeting Generator',
+    category: 'dialogue',
+    glyph: '≋',
+    description: 'Two characters collide for the first time — sparks included.',
+    fields: [
+      { id: 'a', label: 'Character A', type: 'text', placeholder: 'Name' },
+      { id: 'b', label: 'Character B', type: 'text', placeholder: 'Name' },
+      { id: 'charge', label: 'Charge', type: 'select', options: ['instant friction', 'wary curiosity', 'unwanted attraction', 'false first impressions', 'one recognizes the other'] },
+    ],
+    buildDirective: (v) =>
+      `Write the first meeting between ${v.a || 'Character A'} and ${v.b || 'Character B'}, charged with ${v.charge ?? 'instant friction'}. ` +
+      'Dialogue-led scene, 250-400 words, in the project\'s voice. Each must want something from the exchange and neither may fully get it. ' +
+      'End on the line that guarantees they\'ll meet again. ' + NO_PREAMBLE,
+    projectPayload: (p) => castBlock(p),
+  },
+  {
+    id: 'epistolary-composer',
+    name: 'Epistolary Composer',
+    category: 'dialogue',
+    glyph: '✉',
+    description: 'In-world documents: letters, diaries, reports, transmissions.',
+    fields: [
+      { id: 'kind', label: 'Document', type: 'select', options: ['letter', 'diary entry', 'official report', 'last testament', 'intercepted message', 'newspaper clipping'] },
+      { id: 'who', label: 'Written by', type: 'text', placeholder: 'Character name' },
+      seedField('What it must convey — and what it must accidentally reveal'),
+    ],
+    buildDirective: (v) =>
+      `Compose an in-world ${v.kind ?? 'letter'} written by ${v.who || 'a character from the cast'}. ` +
+      'Fully in their voice and period register, with plausible formalities. It should say what the writer intends — and betray one thing they didn\'t mean to reveal, visible only between the lines. ' +
+      'Under 350 words. ' + NO_PREAMBLE,
+    projectPayload: (p) => [castBlock(p), codexBlock(p)].join('\n\n'),
+  },
+
+  // ---- world ----
+  {
+    id: 'festival-generator',
+    name: 'Festival & Holiday Generator',
+    category: 'world',
+    glyph: '☀',
+    description: 'What this world celebrates — and what the feast papers over.',
+    codexType: 'event',
+    fields: [
+      { id: 'where', label: 'Culture / place', type: 'text', placeholder: 'Leave blank to fit the project world' },
+    ],
+    buildDirective: (v) =>
+      `Design a festival or holiday${v.where ? ` for ${v.where}` : ' for this world'}. ` +
+      'Output labeled sections: NAME & SEASON, ORIGIN (the true event, then the prettier official story), OBSERVANCE (foods, rites, what children do, what drunks do), ' +
+      'TABOO (the one thing never done that day), UNDERSIDE (who the festival quietly excludes or mocks), and STORY HOOKS (2 scenes that could only happen during it). Under 320 words. ' + NO_PREAMBLE,
+    projectPayload: (p) => codexBlock(p),
+  },
+  {
+    id: 'cuisine-generator',
+    name: 'Cuisine & Food Culture',
+    category: 'world',
+    glyph: '♨',
+    description: 'Meals, manners, and what eating together means here.',
+    codexType: 'other',
+    fields: [
+      { id: 'where', label: 'Culture / place', type: 'text', placeholder: 'Leave blank to fit the project world' },
+    ],
+    buildDirective: (v) =>
+      `Design the food culture${v.where ? ` of ${v.where}` : ' of this world'}. ` +
+      'Sections: STAPLES (what the land makes possible), A COMMON MEAL (described sensorily, as prose a novel could lift), A FEAST DISH and what serving it signals, TABLE MANNERS (two rules, one class divide), ' +
+      'HOSPITALITY LAW (what hosts owe guests), and SCARCITY (what people eat when it all goes wrong). Under 320 words. ' + NO_PREAMBLE,
+    projectPayload: (p) => codexBlock(p),
+  },
+  {
+    id: 'folk-tale-generator',
+    name: 'Legend & Folk Tale Generator',
+    category: 'world',
+    glyph: '☾',
+    description: 'The stories this world tells its children — with teeth.',
+    codexType: 'other',
+    temperature: 1.0,
+    fields: [
+      seedField('A place, figure, or fear the tale should orbit — or leave blank'),
+      { id: 'length', label: 'Length', type: 'select', options: ['fireside version (200 words)', 'full telling (450 words)'] },
+    ],
+    buildDirective: (v) =>
+      `Write an in-world folk tale (${v.length ?? 'fireside version (200 words)'}) as this world's people actually tell it — cadenced, repeatable, slightly wrong in the way oral stories are. ` +
+      'Include one moral the tellers intend, one truth the tale accidentally preserves, and a closing formula ("and that is why…"). ' +
+      'After the tale, add one line: WHAT REALLY HAPPENED, for the author\'s eyes. ' + NO_PREAMBLE,
+    projectPayload: (p) => codexBlock(p),
+  },
+  {
+    id: 'slang-generator',
+    name: 'Slang & Idiom Generator',
+    category: 'world',
+    glyph: '»',
+    description: 'How this world actually talks — curses, blessings, street shorthand.',
+    codexType: 'language',
+    fields: [
+      { id: 'who', label: 'Spoken by', type: 'text', placeholder: 'Sailors, court nobles, gutter kids, the whole culture…' },
+    ],
+    buildDirective: (v) =>
+      `Generate living slang${v.who ? ` for ${v.who}` : ' for this world'}: ` +
+      '6 IDIOMS (each with literal origin story in one line), 4 CURSES/OATHS (graded mild → unforgivable, rooted in what this culture holds sacred), 3 BLESSINGS/GREETINGS, and 3 INSULTS with the social rule about who may say them to whom. ' +
+      'Everything must be sayable aloud in prose without a glossary. ' + NO_PREAMBLE,
+    projectPayload: (p) => codexBlock(p),
+  },
+
+  // ---- revision ----
+  {
+    id: 'echo-hunter',
+    name: 'Echo Hunter',
+    category: 'revision',
+    glyph: '↻',
+    description: 'Repeated words, pet phrases, and crutch constructions.',
+    temperature: 0.3,
+    fields: [pasteField('Text to sweep for echoes')],
+    buildDirective: () =>
+      'Hunt this text for echoes: words repeated in close proximity, pet phrases used more than once, crutch constructions (e.g. "seemed to", "began to", body-part reflexes), and rhythmic tics (same sentence shape thrice). ' +
+      'Output: each echo with its count and locations paraphrased, severity (jarring / noticeable / subtle), and one alternative for the worst instance. End with the three worst offenders ranked. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'hook-audit',
+    name: 'Opening Hook Audit',
+    category: 'revision',
+    glyph: '☄',
+    description: 'A cold read of your first page — would a stranger turn it?',
+    temperature: 0.4,
+    fields: [pasteField('Your opening — first 300-600 words')],
+    buildDirective: () =>
+      'Audit this opening as a cold-reading acquisitions editor. Score five dials 1-5 with one-line justifications: VOICE, CLARITY (who/where/when grounded?), TENSION, PROMISE (what kind of book this signals), MOMENTUM (the page-turn pull). ' +
+      'Then: THE LINE THAT WORKS (quote it), THE LINE THAT LOSES ME (quote + why), and the single highest-leverage revision. Honest, specific, kind. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'cliffhanger-pass',
+    name: 'Cliffhanger Pass',
+    category: 'revision',
+    glyph: '☇',
+    description: 'Sharpen a scene ending until putting the book down hurts.',
+    fields: [pasteField('The scene ending (last few paragraphs)')],
+    buildDirective: () =>
+      'Strengthen this scene ending. Offer 3 versions of the final beats: THE CUT (end earlier than the author dared — show where), THE TURN (a late line that reframes the scene), THE DOOR (a new incoming pressure). ' +
+      'Each version: the rewritten final 2-4 sentences, in the manuscript\'s voice. Then one line on which to choose and why. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'emotion-heatmap',
+    name: 'Emotion Heatmap',
+    category: 'revision',
+    glyph: '∿',
+    description: 'Beat-by-beat emotional temperature — find the flat stretches.',
+    temperature: 0.4,
+    fields: [pasteField('Scene or chapter to map')],
+    buildDirective: () =>
+      'Map the emotional temperature of this text beat by beat. Output a list: BEAT (five-word summary) — DOMINANT EMOTION — INTENSITY 1-5 — WHOSE emotion the reader is riding. ' +
+      'Then diagnose: flat stretches (3+ beats at the same intensity), missing valleys before peaks, and whether the final beat lands higher or lower than the opening. One suggested adjustment. ' + NO_PREAMBLE,
+  },
+
+  // ---- publishing ----
+  {
+    id: 'author-bio',
+    name: 'Author Bio Generator',
+    category: 'publishing',
+    glyph: '☙',
+    description: 'Third-person bios that sound accomplished, not embarrassing.',
+    fields: [
+      seedField('Raw facts: day job, credits, hometown, odd hobbies — the truth, unpolished'),
+      { id: 'tone', label: 'Tone', type: 'select', options: ['literary', 'warm', 'wry', 'commercial'] },
+    ],
+    buildDirective: (v) =>
+      `Write 3 author bios in a ${v.tone ?? 'warm'} tone from these facts: a 100-word jacket bio (third person), a 50-word magazine bio, and a one-line social bio. ` +
+      'No invented credentials, no "aspiring", no "wordsmith". If the facts are thin, let confidence and specificity do the work. ' + NO_PREAMBLE,
+  },
+  {
+    id: 'social-teasers',
+    name: 'Social Teaser Pack',
+    category: 'publishing',
+    glyph: '♯',
+    description: 'Posts that sell the book without spoiling the book.',
+    temperature: 1.0,
+    fields: [],
+    buildDirective: () =>
+      'Create a social teaser pack for this book: 3 one-line hooks (under 120 characters, no hashtags), 2 "readers who loved X" posts, ' +
+      '1 atmospheric mood-post built from an image in the manuscript, 1 character-voice post written as if the protagonist typed it, and 1 quote-graphic pull line taken verbatim from the prose if one qualifies. ' +
+      'Label each. No spoilers past the first act. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+  {
+    id: 'series-pitch',
+    name: 'Series Pitch Builder',
+    category: 'publishing',
+    glyph: '♞',
+    description: 'The next books — prove this world has more than one story in it.',
+    fields: [
+      { id: 'count', label: 'How many books?', type: 'select', options: ['trilogy', 'five-book series', 'open-ended series'] },
+    ],
+    buildDirective: (v) =>
+      `Pitch this story as a ${v.count ?? 'trilogy'}. Output: SERIES TITLE + one-line series promise, then per book: TITLE, the core conflict in 2 sentences, and the ending's turn toward the next volume. ` +
+      'Then THE LONG ARC (what only completes at series end), THE ENGINE (why the world keeps generating stories), and WHAT ESCALATES (scope, intimacy, or cost — pick the honest one). Under 450 words. ' + NO_PREAMBLE,
+    projectPayload: (p) => storyBrainBlock(p),
+  },
+]
+
 // ---------- registry ----------
 
 export const FORGE_TOOLS: ForgeTool[] = [
@@ -1124,4 +1555,5 @@ export const FORGE_TOOLS: ForgeTool[] = [
   ...worldTools,
   ...revisionTools,
   ...publishingTools,
+  ...expansionTools,
 ]

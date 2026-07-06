@@ -11,7 +11,7 @@
 ![Bring Your Own Key](https://img.shields.io/badge/BYOK-7_AI_providers-1b1712?style=for-the-badge&logoColor=c9a35c)
 
 A fiction-first AI writing environment for **novelists, roleplayers, game writers, and worldbuilders** —
-a style-matching co-writer, a persistent Story Brain, a 71-tool creative workshop, and an
+a style-matching co-writer, a persistent Story Brain, a 100-tool creative workshop, and an
 interactive text-adventure engine. Not a chatbot with a manuscript window taped to its forehead.
 
 **Everything stays in your browser. Your words, your keys, your canon.**
@@ -75,24 +75,24 @@ flowchart TD
 |---|---|
 | **✒ Manuscript** | The co-writing sandbox: **Continue · Extend · Fork ×3 · Rewrite-without-replacing**, ghost-text suggestions (`Ctrl+Space`, `Tab` to accept), Focus Mode with typewriter scrolling, read-aloud, writing sprints, scene snapshots (a time machine per scene), drag-and-drop outline, find & replace |
 | **⁂ Story Brain** | Continuity Core · Codex · Cast Ledger · Threadmap · Chronicle · Archivist · Continuity Check |
-| **⚒ Forgebench** | **71 tools** across Idea, Plot, Character, Dialogue, World, Revision, Publishing — every one reads your Story Brain |
+| **⚒ Forgebench** | **100 tools** across Idea, Plot, Character, Dialogue, World, Revision, Publishing — every one reads your Story Brain |
 | **⚔ StoryQuest** | Text-adventure engine: 6 GM modes, 8 commands (*Do, Say, Think, Inspect, Use, Travel, Wait, Remember*), tracked world state, **timeline branches** ("what if she accepts the duel?"), d20 rolls, convert-any-branch-to-prose |
 | **❦ Voiceprint** | Style profiles: prose density, vocabulary, dialogue frequency, darkness, surrealism… plus POV and tense locks |
 | **◍ Insights** | GitHub-style writing heatmap, streaks, daily goal ring with ember-burst, manuscript composition stats |
 | **⇲ Import & Export** | EPUB · styled HTML · Markdown · RTF (Word) · plain text · Story Bible · full JSON backup/restore · **SillyTavern import** |
 
 <details>
-<summary><b>🎭 All 71 Forgebench tools</b></summary>
+<summary><b>🎭 All 100 Forgebench tools</b></summary>
 
 | Category | Tools |
 |---|---|
-| **Idea** | Premise Generator · What-If Engine · Story Seed · Title Generator · Logline Generator · Genre Mashup · Trope Inverter · Plot Twist · Ending Generator · Theme Finder |
-| **Plot** | Three-Act Builder · Save the Cat · Hero's Journey · Mystery Clue Map · Romance Arc · Villain Plan · Chapter Outline · Scene Cards · Reverse Outline · Plot Hole Detector |
-| **Character** | Character Generator · Arc Builder · Backstory · Motivation Mapper · Relationship Web · Voice Profile · Conflict Generator · Character Interview · Cast Balance Report |
-| **Dialogue** | Conversation Generator · One-Liners · Subtext Enhancer · Argument Builder · Banter · Exposition Softener · Voice Consistency Check · Screenplay ⇄ Prose Converters |
-| **World** | Nation · City · Magic System · Technology · Religion · Creature · Artifact · Language Seed · Faction · Economy · Map Prompt · Cultural Conflict |
-| **Revision** | Developmental Edit · Line Edit · Copy Edit · Tone Check · Pacing Report · Compression · Expansion · Show-Don't-Tell · Sensory Pass · Dialogue Tightening · Prose Polish · Readability · Chapter Summary |
-| **Publishing** | Back-Cover Blurb · Query Letter · Synopsis · Character List · Series Bible · Ebook Metadata · Content Notes · Adaptation Pitch |
+| **Idea** (14) | Premise Generator · What-If Engine · Story Seed · Title Generator · Logline Generator · Genre Mashup · Trope Inverter · Plot Twist · Ending Generator · Theme Finder · Opening Line Generator · Dramatic Question Engine · Constraint Forge · Comp Titles Finder |
+| **Plot** (15) | Three-Act Builder · Save the Cat · Hero's Journey · Mystery Clue Map · Romance Arc · Villain Plan · Chapter Outline · Scene Cards · Reverse Outline · Plot Hole Detector · Midpoint Reversal · Subplot Weaver · Stakes Escalator · Chekhov Auditor · Ticking Clock |
+| **Character** (14) | Character Generator · Arc Builder · Backstory · Motivation Mapper · Relationship Web · Voice Profile · Conflict Generator · Character Interview · Cast Balance Report · Foil Designer · Fatal Flaw Generator · Minor Character Spotlight · Name Forge · Secret Generator |
+| **Dialogue** (13) | Conversation Generator · One-Liners · Subtext Enhancer · Argument Builder · Banter · Exposition Softener · Voice Consistency Check · Screenplay ⇄ Prose Converters · Dialect & Speech Pattern Designer · Interruption Pass · First Meeting Generator · Epistolary Composer |
+| **World** (16) | Nation · City · Magic System · Technology · Religion · Creature · Artifact · Language Seed · Faction · Economy · Map Prompt · Cultural Conflict · Festival & Holiday · Cuisine & Food Culture · Legend & Folk Tale · Slang & Idiom |
+| **Revision** (17) | Developmental Edit · Line Edit · Copy Edit · Tone Check · Pacing Report · Compression · Expansion · Show-Don't-Tell · Sensory Pass · Dialogue Tightening · Prose Polish · Readability · Chapter Summary · Echo Hunter · Opening Hook Audit · Cliffhanger Pass · Emotion Heatmap |
+| **Publishing** (11) | Back-Cover Blurb · Query Letter · Synopsis · Character List · Series Bible · Ebook Metadata · Content Notes · Adaptation Pitch · Author Bio · Social Teaser Pack · Series Pitch Builder |
 
 </details>
 

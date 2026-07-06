@@ -11,14 +11,18 @@ export interface ProviderConfig {
   models: string[]
 }
 
+export type ThemeId = 'ember' | 'parchment' | 'abyss'
+
 interface SettingsStore {
   /** Active provider id — all AI calls go through this one */
   provider: string
   providers: Record<string, ProviderConfig>
   maxTokens: number
+  theme: ThemeId
   setProvider: (id: string) => void
   updateProvider: (id: string, patch: Partial<ProviderConfig>) => void
   setMaxTokens: (n: number) => void
+  setTheme: (t: ThemeId) => void
 }
 
 function defaultProviders(): Record<string, ProviderConfig> {
@@ -40,12 +44,14 @@ export const useSettings = create<SettingsStore>()(
       provider: 'anthropic',
       providers: defaultProviders(),
       maxTokens: 2048,
+      theme: 'ember',
       setProvider: (id) => set({ provider: id }),
       updateProvider: (id, patch) =>
         set((s) => ({
           providers: { ...s.providers, [id]: { ...s.providers[id], ...patch } },
         })),
       setMaxTokens: (n) => set({ maxTokens: n }),
+      setTheme: (t) => set({ theme: t }),
     }),
     {
       name: 'tomeforge-settings',

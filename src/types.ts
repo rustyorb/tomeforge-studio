@@ -15,11 +15,20 @@ export type Pacing =
   | 'sparse'
   | 'high-intensity'
 
+export interface SceneSnapshot {
+  id: ID
+  label: string
+  createdAt: number
+  content: string
+}
+
 export interface Scene {
   id: ID
   title: string
   content: string
   summary?: string
+  /** Version history — capped, newest first */
+  snapshots?: SceneSnapshot[]
 }
 
 export interface Chapter {
@@ -157,6 +166,29 @@ export interface QuestState {
   state: QuestWorldState
 }
 
+export interface CastWebNode {
+  id: string
+  name: string
+  /** Loose grouping for color, e.g. "protagonists", "court", "the drowned" */
+  group?: string
+}
+
+export type CastWebTone = 'ally' | 'enemy' | 'family' | 'romance' | 'tension' | 'other'
+
+export interface CastWebEdge {
+  from: string
+  to: string
+  label: string
+  tone?: CastWebTone
+}
+
+/** AI-woven relationship graph, cached on the project */
+export interface CastWeb {
+  nodes: CastWebNode[]
+  edges: CastWebEdge[]
+  generatedAt: number
+}
+
 export interface Branch {
   id: ID
   name: string
@@ -189,6 +221,13 @@ export interface Project {
   presetId: string
   quest: QuestState | null
   branches: Branch[]
+  /** Relationship graph woven by AI, cached until regenerated */
+  castWeb?: CastWeb | null
+  /**
+   * Writing log: date (YYYY-MM-DD) → highest total manuscript word count
+   * observed that day. Words written on day D = wordLog[D] - max(earlier days).
+   */
+  wordLog?: Record<string, number>
 }
 
 export interface Preset {

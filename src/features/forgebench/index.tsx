@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useActiveProject, useProjectStyle } from '../../store/useStore'
 import { streamMessage } from '../../lib/ai'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
@@ -48,6 +48,29 @@ export default function ForgebenchPage() {
     () => FORGE_TOOLS.find((t) => t.id === toolId) ?? null,
     [toolId],
   )
+
+  // Deep-link contract: the command palette opens a tool via sessionStorage
+  // 'tf-open-tool' (page not yet mounted) or a 'tf-open-tool' window event.
+  useEffect(() => {
+    const open = (id: string | null) => {
+      const t = FORGE_TOOLS.find((x) => x.id === id)
+      if (!t) return
+      setCategory(t.category)
+      setToolId(t.id)
+      setValues(initialValues(t))
+      setOutput('')
+      setError(null)
+      setSearch('')
+    }
+    const stored = sessionStorage.getItem('tf-open-tool')
+    if (stored) {
+      sessionStorage.removeItem('tf-open-tool')
+      open(stored)
+    }
+    const onEvent = (e: Event) => open((e as CustomEvent<string>).detail)
+    window.addEventListener('tf-open-tool', onEvent)
+    return () => window.removeEventListener('tf-open-tool', onEvent)
+  }, [])
 
   const visibleTools = useMemo(() => {
     const q = search.trim().toLowerCase()

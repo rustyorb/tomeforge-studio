@@ -8,6 +8,8 @@ import Forgebench from './features/forgebench'
 import StoryQuest from './features/storyquest'
 import Voiceprint from './features/voiceprint'
 import SettingsPage from './features/settings'
+import Exporter from './features/exporter'
+import Insights from './features/insights'
 
 function Nav() {
   const project = useActiveProject()
@@ -40,6 +42,10 @@ function Nav() {
 
       <div className="nav-section">Voice</div>
       {link('/voiceprint', '❦', 'Voiceprint')}
+
+      <div className="nav-section">Observatory</div>
+      {link('/insights', '◍', 'Insights')}
+      {link('/export', '⇲', 'Export & Backup')}
 
       <div className="nav-section">System</div>
       {link('/settings', '⚙', 'Settings')}
@@ -90,6 +96,8 @@ export default function App() {
           <Route path="/forgebench" element={project ? <Forgebench /> : <Navigate to="/" />} />
           <Route path="/quest" element={project ? <StoryQuest /> : <Navigate to="/" />} />
           <Route path="/voiceprint" element={<Voiceprint />} />
+          <Route path="/insights" element={<Insights />} />
+          <Route path="/export" element={<Exporter />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

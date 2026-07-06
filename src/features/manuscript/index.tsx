@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ID, Project } from '../../types'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
 import { EmptyState, ErrorBanner } from '../../components/ui'
@@ -39,6 +39,19 @@ export default function ManuscriptPage() {
   const [rewriteOpen, setRewriteOpen] = useState(false)
   const [replaceError, setReplaceError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
+
+  // Deep-link contract: the command palette selects a scene via sessionStorage
+  // 'tf-select-scene' (page not yet mounted) or a 'tf-select-scene' window event.
+  useEffect(() => {
+    const stored = sessionStorage.getItem('tf-select-scene')
+    if (stored) {
+      sessionStorage.removeItem('tf-select-scene')
+      setSelectedSceneId(stored)
+    }
+    const onEvent = (e: Event) => setSelectedSceneId((e as CustomEvent<string>).detail)
+    window.addEventListener('tf-select-scene', onEvent)
+    return () => window.removeEventListener('tf-select-scene', onEvent)
+  }, [])
 
   if (!project) {
     return (

@@ -20,6 +20,12 @@ interface Store {
    */
   updateProject: (id: string, recipe: (draft: Project) => void) => void
 
+  /**
+   * Push a version snapshot of a scene's current content (newest first,
+   * capped). Call before any destructive AI accept/replace.
+   */
+  snapshotScene: (projectId: string, sceneId: string, label: string) => void
+
   createStyleProfile: (name: string) => string
   updateStyleProfile: (id: string, recipe: (draft: StyleProfile) => void) => void
   deleteStyleProfile: (id: string) => void
@@ -32,6 +38,26 @@ interface Store {
  * Failures are broadcast so the UI can warn that changes aren't being saved.
  * NOTE: must be declared before the store — createJSONStorage reads it eagerly.
  */
+const SNAPSHOT_CAP = 20
+
+/**
+ * Record today's manuscript word count on the project's writing log, at most
+ * once every few seconds (counting the whole manuscript per keystroke would
+ * be wasteful). The log keeps the highest total seen per day, so "words
+ * written today" survives deletions and mid-day edits.
+ */
+const lastLogAt = new Map<string, number>()
+function maybeLogWords(project: Project): void {
+  const now = Date.now()
+  if (now - (lastLogAt.get(project.id) ?? 0) < 3000) return
+  lastLogAt.set(project.id, now)
+  const text = project.chapters.flatMap((c) => c.scenes.map((s) => s.content)).join(' ')
+  const total = text.trim() ? text.trim().split(/\s+/).length : 0
+  const day = new Date().toISOString().slice(0, 10)
+  if (!project.wordLog) project.wordLog = {}
+  project.wordLog[day] = Math.max(project.wordLog[day] ?? 0, total)
+}
+
 export const STORAGE_EVENT = 'tomeforge-storage'
 const safeLocalStorage = {
   getItem: (key: string) => localStorage.getItem(key),
@@ -106,6 +132,30 @@ export const useStore = create<Store>()(
           if (!project) return
           recipe(project)
           project.updatedAt = Date.now()
+          maybeLogWords(project)
+        }),
+
+      snapshotScene: (projectId, sceneId, label) =>
+        set((s) => {
+          const project = s.projects.find((p) => p.id === projectId)
+          if (!project) return
+          for (const ch of project.chapters) {
+            const scene = ch.scenes.find((sc) => sc.id === sceneId)
+            if (!scene) continue
+            if (!scene.snapshots) scene.snapshots = []
+            // Skip no-op snapshots (identical to the latest one).
+            if (scene.snapshots[0]?.content === scene.content) return
+            scene.snapshots.unshift({
+              id: uid(),
+              label,
+              createdAt: Date.now(),
+              content: scene.content,
+            })
+            if (scene.snapshots.length > SNAPSHOT_CAP) {
+              scene.snapshots.length = SNAPSHOT_CAP
+            }
+            return
+          }
         }),
 
       createStyleProfile: (name) => {

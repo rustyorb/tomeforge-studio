@@ -7,6 +7,7 @@ import CastTab from './CastTab'
 import ThreadmapTab from './ThreadmapTab'
 import ChronicleTab from './ChronicleTab'
 import ContinuityCheckTab from './ContinuityCheckTab'
+import ArchivistTab from './ArchivistTab'
 import './brain.css'
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'cast', label: 'Cast Ledger' },
   { id: 'threads', label: 'Threadmap' },
   { id: 'chronicle', label: 'Chronicle' },
+  { id: 'archivist', label: 'Archivist' },
   { id: 'check', label: 'Continuity Check' },
 ]
 
@@ -51,6 +53,7 @@ export default function BrainPage() {
       {tab === 'cast' && <CastTab project={project} styleProfile={styleProfile} />}
       {tab === 'threads' && <ThreadmapTab project={project} styleProfile={styleProfile} />}
       {tab === 'chronicle' && <ChronicleTab project={project} />}
+      {tab === 'archivist' && <ArchivistTab project={project} styleProfile={styleProfile} />}
       {tab === 'check' && <ContinuityCheckTab project={project} styleProfile={styleProfile} />}
     </div>
   )

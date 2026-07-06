@@ -10,6 +10,8 @@ import {
   storyBibleToMarkdown,
 } from '../../lib/export/markdown'
 import { projectToHtml } from '../../lib/export/html'
+import { projectToRtf } from '../../lib/export/rtf'
+import SillyTavernImport from './SillyTavernImport'
 import { projectToEpub } from '../../lib/export/epub'
 import { fullBackup, parseBackup, projectBackup } from '../../lib/export/backup'
 import type { BackupPayload } from '../../lib/export/backup'
@@ -232,6 +234,14 @@ export default function ExporterPage() {
                     downloadText(`${slug}.txt`, projectToText(project), 'text/plain')
                   }
                 />
+                <ExportCard
+                  title="Word / RTF"
+                  ext=".rtf"
+                  desc="Rich Text — opens directly in Word, LibreOffice, and Google Docs."
+                  onDownload={() =>
+                    downloadText(`${slug}.rtf`, projectToRtf(project, { author }), 'application/rtf')
+                  }
+                />
               </div>
             )}
           </>
@@ -414,6 +424,8 @@ export default function ExporterPage() {
           </div>
         )}
       </section>
+
+      <SillyTavernImport project={project} />
     </div>
   )
 }

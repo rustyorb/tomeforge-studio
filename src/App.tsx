@@ -14,6 +14,7 @@ import Voiceprint from './features/voiceprint'
 import SettingsPage from './features/settings'
 import Exporter from './features/exporter'
 import Insights from './features/insights'
+import GoalRing from './features/goals/GoalRing'
 
 function Nav() {
   const project = useActiveProject()
@@ -62,6 +63,9 @@ function Nav() {
           </div>
         </div>
       )}
+      <div style={{ marginTop: project ? 0 : 'auto', padding: '0 10px' }}>
+        <GoalRing />
+      </div>
       <div style={{ marginTop: project ? 8 : 'auto', padding: '10px 10px 4px' }}>
         <button
           className="pal-side-hint"

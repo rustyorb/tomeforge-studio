@@ -13,7 +13,12 @@ const COMMANDS: QuestCommand[] = [
   'do', 'say', 'think', 'inspect', 'use', 'travel', 'wait', 'remember',
 ]
 
-type PanelKind = 'inventory' | 'quests' | 'convert' | null
+type PanelKind = 'inventory' | 'quests' | 'convert' | 'branches' | null
+
+/** Deep clone for freezing/restoring quest states across branches. */
+function cloneQuest(q: QuestState): QuestState {
+  return JSON.parse(JSON.stringify(q)) as QuestState
+}
 
 export function PlayView(props: {
   project: Project
@@ -116,6 +121,42 @@ export function PlayView(props: {
     })
   }
 
+  const [branchName, setBranchName] = useState('')
+  const saves = project.questSaves ?? []
+
+  const saveBranch = () => {
+    const name = branchName.trim() || `Branch — turn ${quest.log.length}`
+    const frozen = cloneQuest(quest)
+    updateProject(project.id, (draft) => {
+      if (!draft.questSaves) draft.questSaves = []
+      draft.questSaves.unshift({
+        id: uid(),
+        name,
+        note: `${quest.log.length} turns · ${quest.state.location || 'unknown place'}`,
+        createdAt: Date.now(),
+        quest: frozen,
+      })
+    })
+    setBranchName('')
+  }
+
+  const loadBranch = (id: string) => {
+    const save = saves.find((s) => s.id === id)
+    if (!save) return
+    if (!confirm(`Load "${save.name}"? The current timeline will be replaced — save it as a branch first if you want to keep it.`)) return
+    abortRef.current?.abort()
+    const restored = cloneQuest(save.quest)
+    updateProject(project.id, (draft) => {
+      draft.quest = restored
+    })
+    setPanel(null)
+  }
+
+  const rollD20 = () => {
+    const n = 1 + Math.floor(Math.random() * 20)
+    setText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}(d20: ${n})`)
+  }
+
   return (
     <div className="page sq-page">
       <header className="page-header rise" style={{ marginBottom: 16 }}>
@@ -129,6 +170,9 @@ export function PlayView(props: {
             </div>
           </div>
           <div className="row">
+            <button className="btn small" disabled={busy} onClick={() => setPanel('branches')}>
+              ⎇ Branches{saves.length ? ` (${saves.length})` : ''}
+            </button>
             <button
               className="btn small"
               disabled={busy || quest.log.length === 0}
@@ -183,6 +227,16 @@ export function PlayView(props: {
                 </option>
               ))}
             </select>
+            {quest.mode === 'rpg' && (
+              <button
+                className="btn ghost"
+                disabled={busy}
+                title="Roll a d20 into your action"
+                onClick={rollD20}
+              >
+                🎲
+              </button>
+            )}
             <input
               type="text"
               value={text}
@@ -207,6 +261,58 @@ export function PlayView(props: {
 
         <StateSidebar state={quest.state} />
       </div>
+
+      {panel === 'branches' && (
+        <Modal title="Timeline Branches" onClose={() => setPanel(null)}>
+          <p className="muted" style={{ fontSize: 13.5, marginBottom: 14 }}>
+            Freeze this moment as a branch, then play out a different choice — "what if she
+            accepts the duel?" Load any branch to jump back to that timeline.
+          </p>
+          <div className="row" style={{ marginBottom: 16 }}>
+            <input
+              type="text"
+              value={branchName}
+              placeholder={`Branch — turn ${quest.log.length}`}
+              onChange={(e) => setBranchName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveBranch()
+              }}
+            />
+            <button className="btn primary" style={{ flexShrink: 0 }} onClick={saveBranch}>
+              ⎇ Save Current
+            </button>
+          </div>
+          {saves.length === 0 ? (
+            <p className="faint" style={{ fontSize: 13 }}>No branches saved yet.</p>
+          ) : (
+            <div className="stack">
+              {saves.map((s) => (
+                <div key={s.id} className="row between" style={{ gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14.5 }}>{s.name}</div>
+                    <div className="mono faint" style={{ fontSize: 10.5 }}>
+                      {s.note} · {new Date(s.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="row" style={{ flexShrink: 0 }}>
+                    <button className="btn small" onClick={() => loadBranch(s.id)}>Load</button>
+                    <button
+                      className="btn ghost small danger"
+                      onClick={() =>
+                        updateProject(project.id, (draft) => {
+                          draft.questSaves = (draft.questSaves ?? []).filter((x) => x.id !== s.id)
+                        })
+                      }
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
 
       {panel === 'inventory' && (
         <Modal title="Inventory" onClose={() => setPanel(null)}>

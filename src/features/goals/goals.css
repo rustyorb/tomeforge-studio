@@ -1,0 +1,72 @@
+.gl-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--ink-1);
+}
+
+.gl-ring-box {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.gl-arc {
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+}
+
+.gl-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--parchment-dim);
+}
+
+.gl-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.gl-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--parchment);
+}
+.gl-goal {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--parchment-faint);
+}
+
+/* Ember burst: 8 sparks flying outward once when the goal is crossed */
+.gl-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.gl-burst i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ember-bright);
+  transform: rotate(var(--a)) translateX(0);
+  animation: gl-spark 1.6s ease-out forwards;
+}
+@keyframes gl-spark {
+  0% { opacity: 1; transform: rotate(var(--a)) translateX(4px) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(34px) scale(0.3); }
+}

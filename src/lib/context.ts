@@ -93,6 +93,24 @@ export function buildStoryContext(
     parts.push(`CONTINUITY CORE (current story direction — always honor this):\n${project.memory.trim()}`)
   }
 
+  // Story so far: the Archivist's scene summaries give the model memory of
+  // everything before the recent-text window. Only chapters with at least one
+  // summarized scene appear; the final scene is skipped (its full text is
+  // usually already in recentText).
+  const allScenes = project.chapters.flatMap((c) => c.scenes)
+  const lastSceneId = allScenes[allScenes.length - 1]?.id
+  const soFar = project.chapters
+    .map((ch) => {
+      const sums = ch.scenes
+        .filter((sc) => sc.summary && sc.id !== lastSceneId)
+        .map((sc) => `  – ${sc.summary!.trim()}`)
+      return sums.length ? `• ${ch.title}:\n${sums.join('\n')}` : null
+    })
+    .filter(Boolean)
+  if (soFar.length) {
+    parts.push(`STORY SO FAR (events that already happened — never contradict):\n${soFar.join('\n')}`)
+  }
+
   const matched = matchCodexEntries(project.codex, opts.recentText ?? '')
   if (matched.length) {
     const lore = matched

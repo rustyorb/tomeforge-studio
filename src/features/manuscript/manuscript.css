@@ -457,3 +457,15 @@ textarea.ms-focus-editor:focus { border: none; outline: none; }
   .ms-forks { grid-template-columns: 1fr; }
   .ms-compare { grid-template-columns: 1fr; }
 }
+
+/* Drag & drop reorder targets */
+.ms-drop-over {
+  box-shadow: inset 0 2px 0 var(--ember);
+  background: var(--ember-dim) !important;
+}
+.ms-scene, .ms-chapter-head {
+  cursor: grab;
+}
+.ms-scene:active, .ms-chapter-head:active {
+  cursor: grabbing;
+}

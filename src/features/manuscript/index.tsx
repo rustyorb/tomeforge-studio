@@ -6,6 +6,7 @@ import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 import { getPreset } from '../../lib/presets'
 import { uid } from '../../lib/id'
 import SceneTree from './SceneTree'
+import FindReplace from './FindReplace'
 import Toolbar from './Toolbar'
 import ResultPanels from './ResultPanels'
 import RewritePanel from './RewritePanel'
@@ -44,6 +45,7 @@ export default function ManuscriptPage() {
   const [selectedSceneId, setSelectedSceneId] = useState<ID | null>(null)
   const [overrides, setOverrides] = useState<GenOverrides>({ pacing: '', dialogueRatio: null })
   const [rewriteOpen, setRewriteOpen] = useState(false)
+  const [findOpen, setFindOpen] = useState(false)
   const [replaceError, setReplaceError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [focusMode, setFocusMode] = useState(false)
@@ -257,9 +259,16 @@ export default function ManuscriptPage() {
         <div className="kicker">The Workshop</div>
         <div className="row between wrap">
           <h1>{project.name}</h1>
-          <span className="mono faint">{totalWords.toLocaleString()} words in manuscript</span>
+          <span className="row">
+            <button className="btn ghost small" onClick={() => setFindOpen(true)}>
+              ⌕ Find &amp; Replace
+            </button>
+            <span className="mono faint">{totalWords.toLocaleString()} words in manuscript</span>
+          </span>
         </div>
       </header>
+
+      {findOpen && <FindReplace project={project} onClose={() => setFindOpen(false)} />}
 
       <div className="ms-layout">
         <aside className="ms-side rise-1">

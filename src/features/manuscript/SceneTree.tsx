@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ID, Project } from '../../types'
 import { uid } from '../../lib/id'
 
@@ -9,9 +9,17 @@ interface Props {
   mutate: (recipe: (draft: Project) => void) => void
 }
 
+type DragPayload =
+  | { kind: 'scene'; id: ID; fromChapter: ID }
+  | { kind: 'chapter'; id: ID }
+
 export default function SceneTree(props: Props) {
   const [editingId, setEditingId] = useState<ID | null>(null)
   const [draft, setDraft] = useState('')
+  // dataTransfer payloads aren't readable during dragover, so the payload
+  // lives in a ref for the duration of the drag.
+  const dragRef = useRef<DragPayload | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
 
   const startEdit = (id: ID, title: string) => {
     setEditingId(id)
@@ -74,6 +82,76 @@ export default function SceneTree(props: Props) {
     props.onSelect(id)
   }
 
+  // ---------- drag & drop ----------
+
+  const endDrag = () => {
+    dragRef.current = null
+    setDropTarget(null)
+  }
+
+  /** Move a scene before targetSceneId, or append to targetChapterId. */
+  const dropScene = (payload: Extract<DragPayload, { kind: 'scene' }>, target:
+    | { beforeScene: ID; inChapter: ID }
+    | { appendToChapter: ID }) => {
+    props.mutate((d) => {
+      const from = d.chapters.find((c) => c.id === payload.fromChapter)
+      if (!from) return
+      const idx = from.scenes.findIndex((s) => s.id === payload.id)
+      if (idx < 0) return
+      const [scene] = from.scenes.splice(idx, 1)
+      if ('appendToChapter' in target) {
+        const to = d.chapters.find((c) => c.id === target.appendToChapter)
+        if (to) to.scenes.push(scene)
+        else from.scenes.splice(idx, 0, scene) // target vanished — restore
+      } else {
+        const to = d.chapters.find((c) => c.id === target.inChapter)
+        const at = to?.scenes.findIndex((s) => s.id === target.beforeScene) ?? -1
+        if (to && at >= 0) to.scenes.splice(at, 0, scene)
+        else from.scenes.splice(idx, 0, scene)
+      }
+    })
+  }
+
+  const dropChapter = (chapterId: ID, beforeChapterId: ID) => {
+    if (chapterId === beforeChapterId) return
+    props.mutate((d) => {
+      const idx = d.chapters.findIndex((c) => c.id === chapterId)
+      if (idx < 0) return
+      const [ch] = d.chapters.splice(idx, 1)
+      const at = d.chapters.findIndex((c) => c.id === beforeChapterId)
+      if (at >= 0) d.chapters.splice(at, 0, ch)
+      else d.chapters.splice(idx, 0, ch)
+    })
+  }
+
+  const onDropAt = (targetKey: string, ch: { id: ID }, sc?: { id: ID }) => {
+    const payload = dragRef.current
+    endDrag()
+    if (!payload) return
+    if (payload.kind === 'scene') {
+      if (sc) {
+        if (sc.id !== payload.id) {
+          dropScene(payload, { beforeScene: sc.id, inChapter: ch.id })
+        }
+      } else {
+        dropScene(payload, { appendToChapter: ch.id })
+      }
+    } else if (payload.kind === 'chapter' && !sc) {
+      dropChapter(payload.id, ch.id)
+    }
+  }
+
+  const dragProps = (key: string, accepts: (p: DragPayload) => boolean) => ({
+    onDragOver: (e: React.DragEvent) => {
+      const p = dragRef.current
+      if (p && accepts(p)) {
+        e.preventDefault()
+        setDropTarget(key)
+      }
+    },
+    onDragLeave: () => setDropTarget((t) => (t === key ? null : t)),
+  })
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -90,7 +168,18 @@ export default function SceneTree(props: Props) {
         )}
         {props.project.chapters.map((ch) => (
           <div key={ch.id} className="ms-chapter">
-            <div className="ms-chapter-head">
+            <div
+              className={`ms-chapter-head ${dropTarget === `ch:${ch.id}` ? 'ms-drop-over' : ''}`}
+              draggable={editingId !== ch.id}
+              onDragStart={(e) => {
+                dragRef.current = { kind: 'chapter', id: ch.id }
+                e.dataTransfer.effectAllowed = 'move'
+              }}
+              onDragEnd={endDrag}
+              {...dragProps(`ch:${ch.id}`, () => true)}
+              onDrop={() => onDropAt(`ch:${ch.id}`, ch)}
+              title="Drag to reorder chapters · drop a scene here to move it into this chapter"
+            >
               {editingId === ch.id ? (
                 renameInput
               ) : (
@@ -129,8 +218,19 @@ export default function SceneTree(props: Props) {
             {ch.scenes.map((sc) => (
               <div
                 key={sc.id}
-                className={`ms-scene ${sc.id === props.selectedSceneId ? 'active' : ''}`}
+                className={`ms-scene ${sc.id === props.selectedSceneId ? 'active' : ''} ${
+                  dropTarget === `sc:${sc.id}` ? 'ms-drop-over' : ''
+                }`}
                 onClick={() => props.onSelect(sc.id)}
+                draggable={editingId !== sc.id}
+                onDragStart={(e) => {
+                  dragRef.current = { kind: 'scene', id: sc.id, fromChapter: ch.id }
+                  e.dataTransfer.effectAllowed = 'move'
+                }}
+                onDragEnd={endDrag}
+                {...dragProps(`sc:${sc.id}`, (p) => p.kind === 'scene')}
+                onDrop={() => onDropAt(`sc:${sc.id}`, ch, sc)}
+                title="Drag to reorder · drop before another scene or onto a chapter"
               >
                 {editingId === sc.id ? (
                   renameInput

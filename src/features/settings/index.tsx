@@ -166,7 +166,7 @@ function AppearanceCard() {
 }
 
 export default function SettingsPage() {
-  const { maxTokens, setMaxTokens } = useSettings()
+  const { maxTokens, setMaxTokens, dailyGoal, setDailyGoal } = useSettings()
   return (
     <div className="page">
       <header className="page-header rise">
@@ -196,6 +196,19 @@ export default function SettingsPage() {
               max={16384}
               value={maxTokens}
               onChange={(e) => setMaxTokens(Number(e.target.value) || 2048)}
+            />
+          </Field>
+          <Field
+            label="Daily writing goal (words)"
+            hint="Set 0 to turn the goal off. Progress ring lives in the sidebar; hit it and sparks fly."
+          >
+            <input
+              type="number"
+              min={0}
+              max={20000}
+              step={50}
+              value={dailyGoal}
+              onChange={(e) => setDailyGoal(Number(e.target.value))}
             />
           </Field>
         </div>

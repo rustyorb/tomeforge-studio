@@ -469,3 +469,47 @@ textarea.ms-focus-editor:focus { border: none; outline: none; }
 .ms-scene:active, .ms-chapter-head:active {
   cursor: grabbing;
 }
+
+/* Corkboard view */
+.ms-cork { display: flex; flex-direction: column; gap: 26px; }
+.ms-cork-chapter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 12px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.ms-cork-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 12px;
+}
+.ms-cork-card {
+  background: linear-gradient(180deg, var(--ink-2), var(--ink-1));
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 130px;
+  transition: border-color 0.15s, transform 0.15s;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+.ms-cork-card:hover { border-color: var(--brass); transform: translateY(-2px) rotate(-0.4deg); }
+.ms-cork-title { font-family: var(--font-display); font-size: 14.5px; }
+.ms-cork-body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--parchment-dim);
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.ms-cork-meta { font-size: 10px; color: var(--parchment-faint); }

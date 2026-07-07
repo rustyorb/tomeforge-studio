@@ -4,6 +4,8 @@ import type { Project, STBookStored, STCardStored } from '../../types'
 import { uid } from '../../lib/id'
 import { EmptyState, ErrorBanner } from '../../components/ui'
 import { parseSillyTavernFile } from '../../lib/import/sillytavern'
+import { codexToWorldInfo } from '../../lib/export/worldInfo'
+import { downloadText, slugify } from '../../lib/export/download'
 import CardForge from './CardForge'
 
 type LibraryItem = STCardStored | STBookStored
@@ -175,6 +177,22 @@ export default function SillyTavernPage() {
               ))}
             </select>
           </div>
+          <button
+            className="btn"
+            style={{ alignSelf: 'flex-end' }}
+            disabled={!target || !target.codex.length}
+            title="Export this tome's entire Codex as a SillyTavern World Info lorebook"
+            onClick={() =>
+              target &&
+              downloadText(
+                `${slugify(target.name)}-worldinfo.json`,
+                codexToWorldInfo(target),
+                'application/json',
+              )
+            }
+          >
+            ⬆ Codex → World Info
+          </button>
         </div>
         <ErrorBanner error={error} />
         {notice && <div className="tag green" style={{ marginTop: 10 }}>✓ {notice}</div>}

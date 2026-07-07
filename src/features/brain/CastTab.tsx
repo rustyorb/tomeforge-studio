@@ -33,6 +33,8 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [view, setView] = useState<'cards' | 'web'>('cards')
+  const [discovering, setDiscovering] = useState(false)
+  const [discovered, setDiscovered] = useState<string | null>(null)
 
   const editing = project.characters.find((c) => c.id === editingId) ?? null
 
@@ -47,6 +49,82 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
       })
     })
     setEditingId(id)
+  }
+
+  /**
+   * Scan the manuscript and auto-populate the Cast Ledger: one AI pass finds
+   * every character already living in the prose (that isn't carded yet) and
+   * fills their full card from context.
+   */
+  const discoverCast = async () => {
+    setDiscovering(true)
+    setSyncError(null)
+    setDiscovered(null)
+    try {
+      const existing = project.characters.map((c) => c.name).join(', ') || '(none yet)'
+      const full = await streamMessage({
+        system: buildStoryContext(project, styleProfile, {
+          recentText: tailOfManuscript(project, 14000),
+          includeCast: false,
+          taskDirective:
+            'You are the casting archivist. Read the manuscript excerpt in the user message and identify EVERY ' +
+            `character who appears or is meaningfully referenced — EXCEPT these already catalogued: ${existing}. ` +
+            'Output ONLY a fenced ```json array. Each element has exactly these string keys ' +
+            '(empty string when the manuscript gives no evidence — never invent): ' +
+            '"name", "location", "goal", "secrets", "injuries", "relationships", "emotionalState", ' +
+            '"arcStage", "lastAppearance", "voiceNotes", "forbidden". ' +
+            'lastAppearance = where in the story they last appeared. voiceNotes = how they talk, from their dialogue. ' +
+            'Include minor named characters; skip unnamed walk-ons ("the innkeeper" is fine if they act, "a guard" is not).',
+        }),
+        messages: [
+          {
+            role: 'user',
+            content:
+              `MANUSCRIPT:\n${tailOfManuscript(project, 14000) || '(empty)'}\n\n` +
+              'Return the JSON array of uncatalogued characters now.',
+          },
+        ],
+        temperature: 0.3,
+        maxTokens: 2000,
+      })
+      const parsed = extractJsonBlock(full)
+      if (!Array.isArray(parsed)) {
+        setSyncError('The scan returned no readable character list — try again.')
+        return
+      }
+      const KEYS = ['location', 'goal', 'secrets', 'injuries', 'relationships', 'emotionalState', 'arcStage', 'lastAppearance', 'voiceNotes', 'forbidden'] as const
+      let added = 0
+      updateProject(project.id, (d) => {
+        const names = new Set(d.characters.map((c) => c.name.toLowerCase()))
+        for (const raw of parsed) {
+          if (!raw || typeof raw !== 'object') continue
+          const obj = raw as Record<string, unknown>
+          const name = typeof obj.name === 'string' ? obj.name.trim() : ''
+          if (!name || names.has(name.toLowerCase())) continue
+          names.add(name.toLowerCase())
+          const card: CharacterCard = {
+            id: uid(),
+            name,
+            location: '', goal: '', secrets: '', injuries: '', relationships: '',
+            emotionalState: '', arcStage: '', lastAppearance: '', voiceNotes: '', forbidden: '',
+          }
+          for (const k of KEYS) {
+            if (typeof obj[k] === 'string') card[k] = (obj[k] as string).slice(0, 500)
+          }
+          d.characters.push(card)
+          added++
+        }
+      })
+      setDiscovered(
+        added
+          ? `Found ${added} character${added === 1 ? '' : 's'} in the manuscript — cards filled from context. Review and refine.`
+          : 'No uncatalogued characters found — the ledger already matches the manuscript.',
+      )
+    } catch (e) {
+      setSyncError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDiscovering(false)
+    }
   }
 
   const syncFromManuscript = async (card: CharacterCard) => {
@@ -122,9 +200,26 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
             </button>
           </div>
         </div>
-        <button className="btn primary" onClick={addCharacter}>⊕ New Character</button>
+        <div className="row">
+          <button
+            className="btn"
+            disabled={discovering}
+            title="Scan the manuscript and auto-populate cards for every character already in the story"
+            onClick={() => void discoverCast()}
+          >
+            {discovering ? (
+              <>
+                <span className="spinner" /> Reading the manuscript…
+              </>
+            ) : (
+              '☙ Discover cast'
+            )}
+          </button>
+          <button className="btn primary" onClick={addCharacter}>⊕ New Character</button>
+        </div>
       </div>
 
+      {discovered && <div className="tag green" style={{ marginBottom: 12 }}>✓ {discovered}</div>}
       <ErrorBanner error={syncError} />
 
       {view === 'web' ? (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
-import type { CharacterCard } from '../../types'
+import type { CharacterCard, STCardStored } from '../../types'
 import { streamMessage } from '../../lib/ai'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 import { EmptyState, ErrorBanner } from '../../components/ui'
@@ -9,6 +9,16 @@ import './parlor.css'
 interface Turn {
   role: 'user' | 'assistant'
   text: string
+}
+
+function guestSheet(g: STCardStored): string {
+  const bits = [
+    g.description && `About them: ${g.description}`,
+    g.personality && `Personality: ${g.personality}`,
+    g.scenario && `Their usual scenario: ${g.scenario}`,
+    g.mesExample && `How they speak (examples): ${g.mesExample.slice(0, 600)}`,
+  ].filter(Boolean)
+  return `GUEST SHEET — ${g.name}\n${bits.join('\n')}`
 }
 
 function characterSheet(c: CharacterCard): string {
@@ -29,9 +39,11 @@ function characterSheet(c: CharacterCard): string {
 export default function ParlorPage() {
   const project = useActiveProject()
   const styleProfile = useProjectStyle(project)
-  useStore((s) => s.projects) // subscribe so cast edits reflect live
+  const stLibrary = useStore((s) => s.stLibrary ?? [])
+  const guests = stLibrary.filter((x): x is STCardStored => x.kind === 'card')
 
   const [charId, setCharId] = useState<string | null>(null)
+  const [guestId, setGuestId] = useState<string | null>(null)
   const [turns, setTurns] = useState<Turn[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -58,17 +70,20 @@ export default function ParlorPage() {
   }
 
   const character = project.characters.find((c) => c.id === charId) ?? null
+  const guest = guests.find((g) => g.id === guestId) ?? null
+  const speaker = character ?? guest
 
-  const pick = (id: string) => {
+  const pick = (kind: 'cast' | 'guest', id: string) => {
     abortRef.current?.abort()
-    setCharId(id)
+    setCharId(kind === 'cast' ? id : null)
+    setGuestId(kind === 'guest' ? id : null)
     setTurns([])
     setStream('')
     setError(null)
   }
 
   const send = async () => {
-    if (!character || busy) return
+    if (!speaker || busy) return
     const text = input.trim()
     if (!text) return
     const history = [...turns, { role: 'user' as const, text }]
@@ -79,17 +94,24 @@ export default function ParlorPage() {
     setStream('')
     const controller = new AbortController()
     abortRef.current = controller
+
+    const sheet = character ? characterSheet(character) : guestSheet(guest!)
+    const framing = character
+      ? `You ARE ${speaker.name}, sitting across from the author in a quiet parlor outside the story. ` +
+        'You know only what the character knows at this point in the story — guard your secrets unless skillfully drawn out; ' +
+        'never reveal facts the character has no way of knowing.'
+      : `You ARE ${speaker.name}, a guest visiting the author's parlor from outside this story. ` +
+        'You do NOT know this manuscript\'s events unless the author tells you — react to them fresh, fully in your own character.'
+
     try {
       const full = await streamMessage({
         system: buildStoryContext(project, styleProfile, {
           recentText: tailOfManuscript(project, 5000),
           includeCast: false,
           taskDirective:
-            `${characterSheet(character)}\n\n` +
-            `You ARE ${character.name}, sitting across from the author in a quiet parlor outside the story. ` +
-            'Speak only as this character, first person, in their exact voice. You know only what they know at this point in the story — ' +
-            'guard your secrets unless skillfully drawn out; never reveal facts the character has no way of knowing. ' +
-            'Physical beats and gestures go in *asterisks*. Stay in character absolutely: no AI talk, no meta-commentary, no breaking the fourth wall beyond knowing this is a conversation with your author. ' +
+            `${sheet}\n\n${framing} ` +
+            'Speak only as this character, first person, in their exact voice. Physical beats in *asterisks*. ' +
+            'Stay in character absolutely: no AI talk, no meta-commentary. ' +
             'Answers are conversational — usually 1-2 paragraphs, longer only when the question deserves it.',
         }),
         messages: history.map((t) => ({ role: t.role, content: t.text })),
@@ -111,14 +133,16 @@ export default function ParlorPage() {
   }
 
   const saveTranscript = () => {
-    if (!character || !turns.length) return
+    if (!speaker || !turns.length) return
     const block =
-      `\n\n## Parlor — ${character.name}, ${new Date().toLocaleString()}\n` +
-      turns.map((t) => `${t.role === 'user' ? 'AUTHOR' : character.name.toUpperCase()}: ${t.text}`).join('\n\n')
+      `\n\n## Parlor — ${speaker.name}, ${new Date().toLocaleString()}\n` +
+      turns.map((t) => `${t.role === 'user' ? 'AUTHOR' : speaker.name.toUpperCase()}: ${t.text}`).join('\n\n')
     useStore.getState().updateProject(project.id, (d) => {
       d.notes += block
     })
   }
+
+  const nobodyToSeat = project.characters.length === 0 && guests.length === 0
 
   return (
     <div className="page">
@@ -126,43 +150,63 @@ export default function ParlorPage() {
         <div className="kicker">The Parlor</div>
         <h1>Talk to your characters</h1>
         <p className="sub">
-          Pull up a chair with anyone from the Cast Ledger. They answer in their own voice,
-          know only what they know, and guard their secrets — interrogate, interview, or just
-          listen. Conversations are off the record (session only) unless you save the transcript.
+          Pull up a chair with anyone from the Cast Ledger — they answer in their own voice,
+          know only what they know, and guard their secrets. SillyTavern library cards can
+          visit too. Conversations are off the record (session only) unless you save the transcript.
         </p>
       </header>
 
-      {project.characters.length === 0 ? (
+      {nobodyToSeat ? (
         <EmptyState glyph="☙" title="The parlor is empty">
-          Add characters to the Cast Ledger (Story Brain → Cast Ledger) and they'll take a seat here.
+          Add characters to the Cast Ledger (Story Brain → Cast Ledger) or import some into the
+          SillyTavern library, and they'll take a seat here.
         </EmptyState>
       ) : (
         <div className="pl-layout rise-1">
           <aside className="pl-cast">
-            <div className="kicker" style={{ marginBottom: 8 }}>Who's in the chair</div>
-            {project.characters.map((c) => (
-              <button
-                key={c.id}
-                className={`pl-seat ${c.id === charId ? 'active' : ''}`}
-                onClick={() => pick(c.id)}
-              >
-                <span className="pl-seat-name">{c.name}</span>
-                {c.emotionalState && <span className="pl-seat-mood">{c.emotionalState}</span>}
-              </button>
-            ))}
+            {project.characters.length > 0 && (
+              <>
+                <div className="kicker" style={{ marginBottom: 8 }}>From this tome</div>
+                {project.characters.map((c) => (
+                  <button
+                    key={c.id}
+                    className={`pl-seat ${c.id === charId ? 'active' : ''}`}
+                    onClick={() => pick('cast', c.id)}
+                  >
+                    <span className="pl-seat-name">{c.name}</span>
+                    {c.emotionalState && <span className="pl-seat-mood">{c.emotionalState}</span>}
+                  </button>
+                ))}
+              </>
+            )}
+            {guests.length > 0 && (
+              <>
+                <div className="kicker" style={{ margin: '10px 0 8px' }}>Library guests</div>
+                {guests.map((g) => (
+                  <button
+                    key={g.id}
+                    className={`pl-seat ${g.id === guestId ? 'active' : ''}`}
+                    onClick={() => pick('guest', g.id)}
+                  >
+                    <span className="pl-seat-name">❖ {g.name}</span>
+                    {g.tags.length > 0 && <span className="pl-seat-mood">{g.tags.slice(0, 3).join(', ')}</span>}
+                  </button>
+                ))}
+              </>
+            )}
           </aside>
 
           <section className="pl-room">
-            {!character ? (
+            {!speaker ? (
               <EmptyState glyph="❝" title="Choose a character">
-                Pick someone from the cast to begin the conversation.
+                Pick someone from the cast — or a library guest — to begin the conversation.
               </EmptyState>
             ) : (
               <>
                 <div className="pl-log" ref={logRef}>
                   {turns.length === 0 && !busy && (
                     <div className="faint pl-hint">
-                      *{character.name} settles into the chair across from you.*
+                      *{speaker.name} settles into the chair across from you.*
                       <br />
                       Ask about their past, press them on their secrets, or ask what they think
                       of the other characters…
@@ -177,7 +221,12 @@ export default function ParlorPage() {
                       <div key={i} className="pl-turn-char prose-block">{t.text}</div>
                     ),
                   )}
-                  {busy && <div className="pl-turn-char prose-block gen-stream">{stream}<span className="gen-cursor" /></div>}
+                  {busy && (
+                    <div className="pl-turn-char prose-block gen-stream">
+                      {stream}
+                      <span className="gen-cursor" />
+                    </div>
+                  )}
                   <ErrorBanner error={error} />
                 </div>
 
@@ -186,7 +235,7 @@ export default function ParlorPage() {
                     type="text"
                     value={input}
                     disabled={busy}
-                    placeholder={`Say something to ${character.name}…`}
+                    placeholder={`Say something to ${speaker.name}…`}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') void send()
@@ -202,7 +251,14 @@ export default function ParlorPage() {
                 </div>
 
                 <div className="row" style={{ marginTop: 10, justifyContent: 'space-between' }}>
-                  <button className="btn ghost small" disabled={!turns.length} onClick={() => { setTurns([]); setError(null) }}>
+                  <button
+                    className="btn ghost small"
+                    disabled={!turns.length}
+                    onClick={() => {
+                      setTurns([])
+                      setError(null)
+                    }}
+                  >
                     Clear conversation
                   </button>
                   <button className="btn small" disabled={!turns.length} onClick={saveTranscript}>

@@ -307,6 +307,45 @@ export const PRESETS: Preset[] = [
     directive:
       'Write epistolary: the scene conveyed through in-world documents — letters, journal entries, reports, messages — each in its writer\'s voice, each revealing more than its author intends.',
   },
+  // ---- heat ladder (romance spice levels, adult fiction) ----
+  {
+    id: 'heat-1-sweet',
+    name: 'Heat 🌶 Sweet',
+    description: 'Closed door. Butterflies, hand-brushes, one kiss that lands.',
+    temperature: 0.85,
+    directive:
+      'Write sweet romance, heat level 1 of 4: attraction lives in nerves, glances, and almost-touches. ' +
+      'Physical intimacy peaks at kissing; anything further happens behind a firmly closed door. ' +
+      'Emotional vulnerability is the real event of every scene.',
+  },
+  {
+    id: 'heat-2-simmer',
+    name: 'Heat 🌶🌶 Simmer',
+    description: 'Door ajar. Sensory desire, interrupted moments, ache.',
+    temperature: 0.9,
+    directive:
+      'Write simmering romance, heat level 2 of 4: desire is explicit in the characters\' bodies and thoughts — heat, breath, the catalog of small details wanting makes. ' +
+      'Intimate scenes begin on the page and fade artfully at the threshold. Interruption and denial are your best instruments; the ache matters more than the act.',
+  },
+  {
+    id: 'heat-3-steam',
+    name: 'Heat 🌶🌶🌶 Steam',
+    description: 'Open door. On-page intimacy, emotionally grounded.',
+    temperature: 0.9,
+    directive:
+      'Write steamy adult romance, heat level 3 of 4: intimate scenes play out on the page, sensual and unhurried, rendered through emotion and sensation in the manuscript\'s literary voice. ' +
+      'Enthusiastic consent is textual and part of the charge. Every intimate beat must change something between the characters — no scene is only physical.',
+  },
+  {
+    id: 'heat-4-scorch',
+    name: 'Heat 🌶🌶🌶🌶 Scorch',
+    description: 'Frank adult heat — still literary, still character-first.',
+    temperature: 0.95,
+    directive:
+      'Write high-heat adult romance, level 4 of 4: intimacy on the page with frank, unblushing sensuality, in the manuscript\'s voice — literary, never crude for its own sake. ' +
+      'Consent is enthusiastic and explicit. Power, trust, and vulnerability are the true subjects; the body is how the characters finally tell each other the truth. ' +
+      'Interiority stays switched on throughout — desire narrated from inside, not observed like choreography.',
+  },
 ]
 
 export function getPreset(id: string): Preset {

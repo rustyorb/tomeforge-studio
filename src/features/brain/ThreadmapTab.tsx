@@ -4,6 +4,8 @@ import { uid } from '../../lib/id'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 import { CopyButton, EmptyState, ErrorBanner, Field, StreamView } from '../../components/ui'
 import { useStreamTask } from './useStreamTask'
+import { useState } from 'react'
+import { discoverArray, str } from './discover'
 
 const THREAD_KINDS: ThreadKind[] = [
   'clue', 'question', 'prophecy', 'weapon', 'secret', 'promise', 'conflict',
@@ -40,6 +42,60 @@ export default function ThreadmapTab(props: { project: Project; styleProfile: St
     })
   }
 
+  const [detecting, setDetecting] = useState(false)
+  const [detectNote, setDetectNote] = useState<string | null>(null)
+  const [detectError, setDetectError] = useState<string | null>(null)
+
+  const detectThreads = async () => {
+    setDetecting(true)
+    setDetectError(null)
+    setDetectNote(null)
+    try {
+      const existing = project.threads.map((t) => t.title).join('; ') || '(none yet)'
+      const rows = await discoverArray(
+        project,
+        styleProfile,
+        'You are the narrative accountant. From the manuscript excerpt, detect every PLANTED THREAD still awaiting payoff — ' +
+          'clues introduced, questions raised, prophecies stated, weapons/objects given weight, secrets hinted, promises made, conflicts opened — ' +
+          `EXCEPT threads already tracked: ${existing}. ` +
+          'Output ONLY a fenced ```json array; each element has string keys: ' +
+          '"title" (short name for the thread), "kind" (exactly one of: clue, question, prophecy, weapon, secret, promise, conflict), ' +
+          '"setup" (one sentence: how the text planted it), "chapterIntroduced" (best guess like "Ch. 2", empty if unclear), ' +
+          '"payoffNotes" (one sentence suggesting where/how it could pay off). Only include genuinely planted elements.',
+      )
+      const KINDS = new Set(THREAD_KINDS)
+      let added = 0
+      updateProject(project.id, (d) => {
+        const titles = new Set(d.threads.map((t) => t.title.toLowerCase()))
+        for (const row of rows) {
+          const title = str(row.title, 120).trim()
+          if (!title || titles.has(title.toLowerCase())) continue
+          titles.add(title.toLowerCase())
+          const kind = str(row.kind, 20) as ThreadKind
+          d.threads.push({
+            id: uid(),
+            title,
+            kind: KINDS.has(kind) ? kind : 'question',
+            setup: str(row.setup, 300),
+            chapterIntroduced: str(row.chapterIntroduced, 60),
+            status: 'open',
+            payoffNotes: str(row.payoffNotes, 300),
+          })
+          added++
+        }
+      })
+      setDetectNote(
+        added
+          ? `Detected ${added} planted thread${added === 1 ? '' : 's'} — the goblin accountant has updated the ledger.`
+          : 'No new planted threads found.',
+      )
+    } catch (e) {
+      setDetectError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDetecting(false)
+    }
+  }
+
   const suggestPayoffs = async () => {
     const open = project.threads.filter((t) => t.status === 'open')
     const list = open
@@ -71,8 +127,20 @@ export default function ThreadmapTab(props: { project: Project; styleProfile: St
     <div className="rise">
       <div className="row between" style={{ marginBottom: 16 }}>
         <span className="kicker">Foreshadowing & Payoff · {project.threads.length}</span>
-        <button className="btn primary" onClick={addThread}>⊕ New Thread</button>
+        <div className="row">
+          <button
+            className="btn"
+            disabled={detecting}
+            title="Scan the manuscript for planted clues, promises, and loaded guns"
+            onClick={() => void detectThreads()}
+          >
+            {detecting ? (<><span className="spinner" /> Auditing…</>) : '⟠ Detect planted threads'}
+          </button>
+          <button className="btn primary" onClick={addThread}>⊕ New Thread</button>
+        </div>
       </div>
+      {detectNote && <div className="tag green" style={{ marginBottom: 12 }}>✓ {detectNote}</div>}
+      <ErrorBanner error={detectError} />
 
       {project.threads.length === 0 && (
         <EmptyState glyph="⟠" title="No threads yet">

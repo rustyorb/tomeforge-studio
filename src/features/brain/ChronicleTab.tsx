@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../../store/useStore'
 import type { Project, TimelineEvent } from '../../types'
 import { uid } from '../../lib/id'
-import { EmptyState, Field } from '../../components/ui'
+import { EmptyState, ErrorBanner, Field } from '../../components/ui'
+import { discoverArray, str } from './discover'
 
 const EVENT_FIELDS: { key: Exclude<keyof TimelineEvent, 'id' | 'order' | 'notes'>; label: string; placeholder: string }[] = [
   { key: 'title', label: 'Title', placeholder: 'The bridge burns' },
@@ -14,6 +15,58 @@ const EVENT_FIELDS: { key: Exclude<keyof TimelineEvent, 'id' | 'order' | 'notes'
 
 export default function ChronicleTab({ project }: { project: Project }) {
   const updateProject = useStore((s) => s.updateProject)
+  const [scanning, setScanning] = useState(false)
+  const [scanNote, setScanNote] = useState<string | null>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
+
+  const extractTimeline = async () => {
+    setScanning(true)
+    setScanError(null)
+    setScanNote(null)
+    try {
+      const existing = project.timeline.map((e) => e.title).join('; ') || '(none yet)'
+      const rows = await discoverArray(
+        project,
+        null,
+        'You are the story chronicler. From the manuscript excerpt, extract every significant EVENT in the order it happened ' +
+          `(story-time order, not necessarily narration order) — EXCEPT events already tracked: ${existing}. ` +
+          'Output ONLY a fenced ```json array; each element has string keys: ' +
+          '"title" (five-word event name), "when" (in-story time as the text implies it), "location", ' +
+          '"characters" (comma-separated names), "chapterRef", "notes" (one sentence, only facts the text establishes). ' +
+          'Empty string when unknown. Include only events that actually occur or are firmly established as having occurred.',
+      )
+      let added = 0
+      updateProject(project.id, (d) => {
+        const titles = new Set(d.timeline.map((e) => e.title.toLowerCase()))
+        let order = d.timeline.reduce((m, e) => Math.max(m, e.order), -1) + 1
+        for (const row of rows) {
+          const title = str(row.title, 120).trim()
+          if (!title || titles.has(title.toLowerCase())) continue
+          titles.add(title.toLowerCase())
+          d.timeline.push({
+            id: uid(),
+            title,
+            when: str(row.when, 120),
+            location: str(row.location, 120),
+            characters: str(row.characters, 200),
+            chapterRef: str(row.chapterRef, 60),
+            notes: str(row.notes, 300),
+            order: order++,
+          })
+          added++
+        }
+      })
+      setScanNote(
+        added
+          ? `Extracted ${added} event${added === 1 ? '' : 's'} from the manuscript — reorder as needed.`
+          : 'No new events found — the timeline already covers the manuscript.',
+      )
+    } catch (e) {
+      setScanError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setScanning(false)
+    }
+  }
 
   const sorted = useMemo(
     () => [...project.timeline].sort((a, b) => a.order - b.order),
@@ -62,8 +115,20 @@ export default function ChronicleTab({ project }: { project: Project }) {
     <div className="rise">
       <div className="row between" style={{ marginBottom: 16 }}>
         <span className="kicker">Timeline · {project.timeline.length} events</span>
-        <button className="btn primary" onClick={addEvent}>⊕ Add Event</button>
+        <div className="row">
+          <button
+            className="btn"
+            disabled={scanning}
+            title="Scan the manuscript and extract events into the timeline"
+            onClick={() => void extractTimeline()}
+          >
+            {scanning ? (<><span className="spinner" /> Reading…</>) : '⌛ Extract from manuscript'}
+          </button>
+          <button className="btn primary" onClick={addEvent}>⊕ Add Event</button>
+        </div>
       </div>
+      {scanNote && <div className="tag green" style={{ marginBottom: 12 }}>✓ {scanNote}</div>}
+      <ErrorBanner error={scanError} />
 
       {sorted.length === 0 ? (
         <EmptyState glyph="⧗" title="No events chronicled">

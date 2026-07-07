@@ -197,6 +197,55 @@ export default function ArchivistTab(props: {
     .flatMap((c) => c.scenes)
     .filter((s) => s.summary).length
 
+  /** Scenes still wearing placeholder names, with enough prose to name. */
+  const GENERIC_TITLE = /^(Scene \d+|Untitled Scene|Opening Scene|Converted Scene)$/i
+  const unnamed = project.chapters.flatMap((ch) =>
+    ch.scenes
+      .filter((sc) => GENERIC_TITLE.test(sc.title.trim()) && sc.content.trim().split(/\s+/).length >= 80)
+      .map((sc) => ({ chapter: ch, scene: sc })),
+  )
+  const [naming, setNaming] = useState(false)
+  const [nameProgress, setNameProgress] = useState('')
+
+  const nameAll = async () => {
+    setNaming(true)
+    setError(null)
+    const controller = new AbortController()
+    abortRef.current = controller
+    try {
+      for (let i = 0; i < unnamed.length; i++) {
+        const { scene } = unnamed[i]
+        setNameProgress(`${i + 1} / ${unnamed.length}`)
+        const title = await streamMessage({
+          system:
+            'You title fiction scenes. Output ONLY the title: 2-5 words, evocative but concrete, ' +
+            'no quotes, no punctuation at the end, title case. Never generic ("The Meeting").',
+          messages: [{ role: 'user', content: scene.content.slice(0, 6000) }],
+          temperature: 0.8,
+          maxTokens: 20,
+          signal: controller.signal,
+        })
+        const clean = title.trim().replace(/^["'“]|["'”]$/g, '').slice(0, 60)
+        if (clean) {
+          updateProject(project.id, (d) => {
+            for (const c of d.chapters) {
+              const s = c.scenes.find((x) => x.id === scene.id)
+              if (s) s.title = clean
+            }
+          })
+        }
+      }
+    } catch (e) {
+      if (!(e instanceof Error && e.name === 'AbortError')) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    } finally {
+      setNaming(false)
+      setNameProgress('')
+      abortRef.current = null
+    }
+  }
+
   return (
     <div className="rise">
       <ErrorBanner error={error} />
@@ -222,6 +271,29 @@ export default function ArchivistTab(props: {
           ) : (
             <button className="btn primary" disabled={!unsummarized.length} onClick={summarizeAll}>
               {unsummarized.length ? `✎ Summarize ${unsummarized.length} scene${unsummarized.length === 1 ? '' : 's'}` : 'All scenes summarized'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="row between wrap">
+          <div>
+            <h3>Scene naming</h3>
+            <p className="muted" style={{ fontSize: 13.5, maxWidth: 560 }}>
+              {unnamed.length
+                ? `${unnamed.length} scene${unnamed.length === 1 ? '' : 's'} still wear placeholder names ("Scene 2", "Untitled…"). The Archivist reads each and christens it.`
+                : 'Every written scene has a real name.'}
+            </p>
+          </div>
+          {naming ? (
+            <div className="row">
+              <span className="mono faint">{nameProgress}</span>
+              <button className="btn small danger" onClick={() => abortRef.current?.abort()}>Stop</button>
+            </div>
+          ) : (
+            <button className="btn primary" disabled={!unnamed.length} onClick={nameAll}>
+              ✒ Name {unnamed.length || ''} scene{unnamed.length === 1 ? '' : 's'}
             </button>
           )}
         </div>

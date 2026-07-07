@@ -7,6 +7,7 @@ import { getPreset } from '../../lib/presets'
 import { uid } from '../../lib/id'
 import SceneTree from './SceneTree'
 import FindReplace from './FindReplace'
+import PromptPeek from './PromptPeek'
 import Toolbar from './Toolbar'
 import ResultPanels from './ResultPanels'
 import RewritePanel from './RewritePanel'
@@ -46,6 +47,7 @@ export default function ManuscriptPage() {
   const [overrides, setOverrides] = useState<GenOverrides>({ pacing: '', dialogueRatio: null })
   const [rewriteOpen, setRewriteOpen] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
+  const [peekOpen, setPeekOpen] = useState(false)
   const [replaceError, setReplaceError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [focusMode, setFocusMode] = useState(false)
@@ -300,7 +302,15 @@ export default function ManuscriptPage() {
                 onGhost={() => ghostRef.current?.triggerGhost()}
                 sprintControl={<SprintControl api={sprintApi} totalWords={totalWords} />}
                 mutate={mutate}
+                onPeek={() => setPeekOpen(true)}
               />
+
+              {peekOpen && (
+                <PromptPeek
+                  system={buildSystem(buildDirective('continue', overrides))}
+                  onClose={() => setPeekOpen(false)}
+                />
+              )}
 
               <div className="panel">
                 <div className="panel-head">

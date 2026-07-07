@@ -34,6 +34,8 @@ interface Props {
   /** Sprint chip / setup control rendered at the row's right edge. */
   sprintControl: React.ReactNode
   mutate: (recipe: (draft: Project) => void) => void
+  /** Opens the Prompt Peek modal (what the AI sees) */
+  onPeek?: () => void
 }
 
 export default function Toolbar(props: Props) {
@@ -124,6 +126,15 @@ export default function Toolbar(props: Props) {
             >
               ❦ {props.styleProfile ? props.styleProfile.name : 'no voiceprint'}
             </span>
+            {props.onPeek && (
+              <button
+                className="btn ghost small"
+                title="Prompt Peek — see exactly what the AI is given on the next generation"
+                onClick={props.onPeek}
+              >
+                👁 Peek
+              </button>
+            )}
             {locks?.povLock && <span className="tag brass">POV · {locks.povLock}</span>}
             {locks?.tenseLock && <span className="tag brass">Tense · {locks.tenseLock}</span>}
           </div>

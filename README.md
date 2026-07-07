@@ -73,13 +73,17 @@ flowchart TD
 
 | Room | What happens there |
 |---|---|
-| **✒ Manuscript** | The co-writing sandbox: **Continue · Extend · Fork ×3 · Rewrite-without-replacing**, ghost-text suggestions (`Ctrl+Space`, `Tab` to accept), Focus Mode with typewriter scrolling, read-aloud, writing sprints, scene snapshots (a time machine per scene), drag-and-drop outline, find & replace |
-| **⁂ Story Brain** | Continuity Core · Codex · Cast Ledger · Threadmap · Chronicle · Archivist · Continuity Check |
+| **✒ Manuscript** | The co-writing sandbox: **Continue · Extend · Fork ×3 · Rewrite-without-replacing**, ghost-text suggestions (`Ctrl+Space`, `Tab` to accept), Focus Mode with typewriter scrolling, **Corkboard view** (scene cards, drag to restructure), Prompt Peek (see exactly what the AI sees), read-aloud, writing sprints, scene snapshots, find & replace |
+| **⁂ Story Brain** | Continuity Core · Codex · Cast Ledger · Threadmap · Chronicle · Archivist (name scanning, scene summaries & naming) · Continuity Check |
+| **❝ The Parlor** | Sit down with anyone from your cast — they answer **in their own voice**, know only what they know, and guard their secrets. Interview, interrogate, or just listen; save transcripts to notes |
 | **⚒ Forgebench** | **100 tools** across Idea, Plot, Character, Dialogue, World, Revision, Publishing — every one reads your Story Brain |
 | **⚔ StoryQuest** | Text-adventure engine: 6 GM modes, 8 commands (*Do, Say, Think, Inspect, Use, Travel, Wait, Remember*), tracked world state, **timeline branches** ("what if she accepts the duel?"), d20 rolls, convert-any-branch-to-prose |
 | **❦ Voiceprint** | Style profiles: prose density, vocabulary, dialogue frequency, darkness, surrealism… plus POV and tense locks |
 | **◍ Insights** | GitHub-style writing heatmap, streaks, daily goal ring with ember-burst, manuscript composition stats |
-| **⇲ Import & Export** | EPUB · styled HTML · Markdown · RTF (Word) · plain text · Story Bible · full JSON backup/restore · **SillyTavern import** |
+| **⇲ Import & Export** | EPUB · styled HTML · Markdown · RTF (Word) · plain text · Story Bible · full JSON backup/restore |
+| **❖ SillyTavern** | A persistent library for imported character cards (V1/V2/V3, .json/.png) and lorebooks — import once, add into any tome's Story Brain forever |
+
+Plus **✨ Inspire buttons** wherever a blank field stares back — new-tome ideas, quest premises, memory drafts, director's notes, voice descriptions.
 
 <details>
 <summary><b>🎭 All 100 Forgebench tools</b></summary>

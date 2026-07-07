@@ -4,6 +4,7 @@ import type { CharacterCard, Project, StyleProfile } from '../../types'
 import { uid } from '../../lib/id'
 import { streamMessage, extractJsonBlock } from '../../lib/ai'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
+import { discoverArray } from './discover'
 import { EmptyState, ErrorBanner, Field, Modal } from '../../components/ui'
 import RelationWeb from './RelationWeb'
 
@@ -62,43 +63,23 @@ export default function CastTab(props: { project: Project; styleProfile: StylePr
     setDiscovered(null)
     try {
       const existing = project.characters.map((c) => c.name).join(', ') || '(none yet)'
-      const full = await streamMessage({
-        system: buildStoryContext(project, styleProfile, {
-          recentText: tailOfManuscript(project, 14000),
-          includeCast: false,
-          taskDirective:
-            'You are the casting archivist. Read the manuscript excerpt in the user message and identify EVERY ' +
-            `character who appears or is meaningfully referenced — EXCEPT these already catalogued: ${existing}. ` +
-            'Output ONLY a fenced ```json array. Each element has exactly these string keys ' +
-            '(empty string when the manuscript gives no evidence — never invent): ' +
-            '"name", "location", "goal", "secrets", "injuries", "relationships", "emotionalState", ' +
-            '"arcStage", "lastAppearance", "voiceNotes", "forbidden". ' +
-            'lastAppearance = where in the story they last appeared. voiceNotes = how they talk, from their dialogue. ' +
-            'Include minor named characters; skip unnamed walk-ons ("the innkeeper" is fine if they act, "a guard" is not).',
-        }),
-        messages: [
-          {
-            role: 'user',
-            content:
-              `MANUSCRIPT:\n${tailOfManuscript(project, 14000) || '(empty)'}\n\n` +
-              'Return the JSON array of uncatalogued characters now.',
-          },
-        ],
-        temperature: 0.3,
-        maxTokens: 2000,
-      })
-      const parsed = extractJsonBlock(full)
-      if (!Array.isArray(parsed)) {
-        setSyncError('The scan returned no readable character list — try again.')
-        return
-      }
+      const rows = await discoverArray(
+        project,
+        styleProfile,
+        'Identify EVERY character who appears or is meaningfully referenced in the manuscript — ' +
+          `human or otherwise (aliens, animals, gnomes, objects with personality all count) — EXCEPT these already catalogued: ${existing}. ` +
+          'Each array element has exactly these string keys ' +
+          '(empty string when the manuscript gives no evidence — never invent): ' +
+          '"name", "location", "goal", "secrets", "injuries", "relationships", "emotionalState", ' +
+          '"arcStage", "lastAppearance", "voiceNotes", "forbidden". ' +
+          'lastAppearance = where in the story they last appeared. voiceNotes = how they talk, from their dialogue. ' +
+          'Include minor named characters and titled roles that act ("the office gnome" counts); skip true unnamed walk-ons.',
+      )
       const KEYS = ['location', 'goal', 'secrets', 'injuries', 'relationships', 'emotionalState', 'arcStage', 'lastAppearance', 'voiceNotes', 'forbidden'] as const
       let added = 0
       updateProject(project.id, (d) => {
         const names = new Set(d.characters.map((c) => c.name.toLowerCase()))
-        for (const raw of parsed) {
-          if (!raw || typeof raw !== 'object') continue
-          const obj = raw as Record<string, unknown>
+        for (const obj of rows) {
           const name = typeof obj.name === 'string' ? obj.name.trim() : ''
           if (!name || names.has(name.toLowerCase())) continue
           names.add(name.toLowerCase())

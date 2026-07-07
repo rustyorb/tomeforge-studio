@@ -15,6 +15,7 @@ import SettingsPage from './features/settings'
 import Exporter from './features/exporter'
 import Insights from './features/insights'
 import GoalRing from './features/goals/GoalRing'
+import SillyTavern from './features/sillytavern'
 
 function Nav() {
   const project = useActiveProject()
@@ -51,6 +52,7 @@ function Nav() {
       <div className="nav-section">Observatory</div>
       {link('/insights', '◍', 'Insights')}
       {link('/export', '⇲', 'Import & Export')}
+      {link('/sillytavern', '❖', 'SillyTavern')}
 
       <div className="nav-section">System</div>
       {link('/settings', '⚙', 'Settings')}
@@ -138,6 +140,7 @@ export default function App() {
           <Route path="/voiceprint" element={<Voiceprint />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/export" element={<Exporter />} />
+          <Route path="/sillytavern" element={<SillyTavern />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

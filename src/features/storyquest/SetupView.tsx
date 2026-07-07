@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { Project, QuestMode } from '../../types'
 import { useStore } from '../../store/useStore'
 import { Field } from '../../components/ui'
+import { InspireButton } from '../../components/InspireButton'
+import { buildStoryContext } from '../../lib/context'
 import { QUEST_MODES } from './modes'
 
 export function SetupView(props: { project: Project }) {
@@ -78,6 +80,22 @@ export function SetupView(props: { project: Project }) {
           label="Premise"
           hint="Where the adventure starts. Prefilled from the project's logline and continuity core."
         >
+          <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 4 }}>
+            <InspireButton
+              title="Draft an adventure premise from this tome's Story Brain"
+              build={() => ({
+                system: buildStoryContext(project, null, {
+                  taskDirective:
+                    `Draft a compelling ${mode}-mode text-adventure premise for the player (2-4 sentences): ` +
+                    'where they stand as it begins, what presses on them, and the first choice looming. ' +
+                    'Second person. Output only the premise.',
+                }),
+                user: 'Write the premise now.',
+                maxTokens: 250,
+              })}
+              onText={setPremise}
+            />
+          </div>
           <textarea
             value={premise}
             rows={5}

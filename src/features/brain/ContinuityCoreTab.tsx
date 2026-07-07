@@ -1,6 +1,8 @@
 import { useStore } from '../../store/useStore'
 import type { CanonMode, Project } from '../../types'
 import { Field } from '../../components/ui'
+import { InspireButton } from '../../components/InspireButton'
+import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 
 const CANON_OPTIONS: { mode: CanonMode; title: string; desc: string }[] = [
   { mode: 'loose', title: 'Loose', desc: 'Invent freely — new characters, places, and facts are welcome.' },
@@ -20,6 +22,24 @@ export default function ContinuityCoreTab({ project }: { project: Project }) {
           label="Memory"
           hint="The always-honored current story direction. Injected into every generation, no matter what."
         >
+          <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 4 }}>
+            <InspireButton
+              title="Draft the memory from the manuscript and codex"
+              build={() => ({
+                system: buildStoryContext(project, null, {
+                  recentText: tailOfManuscript(project, 8000),
+                  taskDirective:
+                    'Draft a Continuity Core memory for this story (4-7 sentences, present tense): ' +
+                    'the current plot goal, the immediate conflict, key recent events, the emotional temperature, ' +
+                    'and 1-2 hard rules the AI must not break (secrets not yet revealed, etc). Output only the memory text.',
+                }),
+                user: 'Draft the memory now.',
+                maxTokens: 350,
+                temperature: 0.5,
+              })}
+              onText={(t) => updateProject(project.id, (d) => { d.memory = t })}
+            />
+          </div>
           <textarea
             rows={7}
             value={project.memory}
@@ -31,6 +51,22 @@ export default function ContinuityCoreTab({ project }: { project: Project }) {
           label="Director's Note"
           hint={'Strongest steering for the next generation — placed last in the prompt. e.g. "[Style: dark fantasy, slow pace, rising dread]"'}
         >
+          <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 4 }}>
+            <InspireButton
+              title="Suggest a Director's Note matching the manuscript's voice"
+              build={() => ({
+                system: buildStoryContext(project, null, {
+                  recentText: tailOfManuscript(project, 6000),
+                  taskDirective:
+                    'Write a one-line Director\'s Note in the bracket style "[Style: …]" — 6-10 comma-separated style/mood/pacing directives that match and sharpen this manuscript\'s existing voice. Output only the bracketed line.',
+                }),
+                user: 'Write the note now.',
+                maxTokens: 100,
+                temperature: 0.7,
+              })}
+              onText={(t) => updateProject(project.id, (d) => { d.authorNote = t })}
+            />
+          </div>
           <textarea
             rows={3}
             value={project.authorNote}

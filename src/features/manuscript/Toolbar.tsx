@@ -113,12 +113,20 @@ export default function Toolbar(props: Props) {
             )}
           </div>
 
-          {locks && (locks.povLock || locks.tenseLock) && (
-            <div className="row wrap ms-locks">
-              {locks.povLock && <span className="tag brass">POV · {locks.povLock}</span>}
-              {locks.tenseLock && <span className="tag brass">Tense · {locks.tenseLock}</span>}
-            </div>
-          )}
+          <div className="row wrap ms-locks">
+            <span
+              className={`tag ${props.styleProfile ? 'ember' : ''}`}
+              title={
+                props.styleProfile
+                  ? `Voiceprint "${props.styleProfile.name}" shapes every generation on this tome — its dials, pacing, and voice notes ride along invisibly. Assign a different one on the Voiceprint page.`
+                  : 'No voiceprint assigned — generations use only the preset. Assign one on the Voiceprint page.'
+              }
+            >
+              ❦ {props.styleProfile ? props.styleProfile.name : 'no voiceprint'}
+            </span>
+            {locks?.povLock && <span className="tag brass">POV · {locks.povLock}</span>}
+            {locks?.tenseLock && <span className="tag brass">Tense · {locks.tenseLock}</span>}
+          </div>
         </div>
 
         <div className="row wrap" style={{ marginTop: 14 }}>

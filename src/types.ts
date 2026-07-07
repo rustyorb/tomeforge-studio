@@ -189,6 +189,36 @@ export interface CastWeb {
   generatedAt: number
 }
 
+// ---------- SillyTavern library (imported cards & lorebooks, cross-project) ----------
+
+export interface STEntry {
+  name: string
+  keys: string[]
+  content: string
+  constant: boolean
+}
+
+export interface STCardStored {
+  id: ID
+  kind: 'card'
+  name: string
+  description: string
+  personality: string
+  scenario: string
+  mesExample: string
+  tags: string[]
+  book: STEntry[]
+  importedAt: number
+}
+
+export interface STBookStored {
+  id: ID
+  kind: 'lorebook'
+  name: string
+  entries: STEntry[]
+  importedAt: number
+}
+
 /** A saved StoryQuest timeline branch — full quest state frozen at a moment */
 export interface QuestSave {
   id: ID

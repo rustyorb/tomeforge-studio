@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
-import type { Project, StyleProfile } from '../types'
+import type { Project, STBookStored, STCardStored, StyleProfile } from '../types'
 import { DEFAULT_STYLE_CONTROLS } from '../types'
 import { uid } from '../lib/id'
 import { seedProject, seedStyleProfiles } from './seed'
@@ -10,6 +10,10 @@ interface Store {
   projects: Project[]
   styleProfiles: StyleProfile[]
   activeProjectId: string | null
+  /** SillyTavern library — imported cards/lorebooks, reusable across tomes */
+  stLibrary: (STCardStored | STBookStored)[]
+  addToSTLibrary: (items: (STCardStored | STBookStored)[]) => void
+  removeFromSTLibrary: (id: string) => void
 
   setActiveProject: (id: string | null) => void
   createProject: (name: string, genre: string, logline: string) => string
@@ -78,6 +82,18 @@ export const useStore = create<Store>()(
       projects: [seedProject()],
       styleProfiles: seedStyleProfiles(),
       activeProjectId: null,
+      stLibrary: [],
+
+      addToSTLibrary: (items) =>
+        set((s) => {
+          if (!s.stLibrary) s.stLibrary = []
+          s.stLibrary.unshift(...items)
+        }),
+
+      removeFromSTLibrary: (id) =>
+        set((s) => {
+          s.stLibrary = (s.stLibrary ?? []).filter((x) => x.id !== id)
+        }),
 
       setActiveProject: (id) =>
         set((s) => {

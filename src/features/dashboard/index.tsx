@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/useStore'
 import type { Project } from '../../types'
 import { Field, Modal } from '../../components/ui'
+import { InspireButton } from '../../components/InspireButton'
 import { Sparkline } from '../insights/Sparkline'
 import {
   PALETTE,
@@ -153,6 +154,33 @@ export default function Dashboard() {
 
       {creating && (
         <Modal title="Forge New Tome" onClose={() => setCreating(false)}>
+          <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 6 }}>
+            <InspireButton
+              title="Stuck? Let the AI invent a title, genre, and logline"
+              build={() => ({
+                system:
+                  'You invent striking, original novel concepts. Output EXACTLY three lines:\n' +
+                  'TITLE: <the title>\nGENRE: <2-4 word genre>\nLOGLINE: <one-sentence logline with protagonist, conflict, stakes, hook>\n' +
+                  'Nothing else. Avoid clichés and anything resembling existing famous works.',
+                user:
+                  name.trim() || genre.trim() || logline.trim()
+                    ? `Build on what I have so far — title: "${name}", genre: "${genre}", logline: "${logline}". Fill or improve the rest.`
+                    : 'Invent something I would never think of. Surprise me.',
+                temperature: 1.05,
+                maxTokens: 200,
+              })}
+              onText={(text) => {
+                const grab = (label: string) =>
+                  text.match(new RegExp(`^${label}:\\s*(.+)$`, 'mi'))?.[1]?.trim() ?? ''
+                const t = grab('TITLE')
+                const g = grab('GENRE')
+                const l = grab('LOGLINE')
+                if (t) setName(t)
+                if (g) setGenre(g)
+                if (l) setLogline(l)
+              }}
+            />
+          </div>
           <Field label="Title">
             <input
               type="text"

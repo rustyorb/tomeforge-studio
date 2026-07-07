@@ -1,6 +1,7 @@
 import type { Pacing, StyleControls, StyleProfile } from '../../types'
 import { useStore } from '../../store/useStore'
 import { Field, Modal, Slider } from '../../components/ui'
+import { InspireButton } from '../../components/InspireButton'
 
 const PACING_OPTIONS: Pacing[] = [
   'slow-burn', 'balanced', 'fast', 'cinematic', 'lyrical', 'sparse', 'high-intensity',
@@ -45,6 +46,23 @@ export function ProfileEditor(props: { profile: StyleProfile; onClose: () => voi
         />
       </Field>
       <Field label="Description" hint="What kind of prose does this voice produce?">
+        <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 4 }}>
+          <InspireButton
+            title="Describe this voice from its name and dials"
+            build={() => ({
+              system:
+                'You describe prose styles for a fiction studio, in the register of "Dense but readable prose. Slow dread. Sensory description. Dialogue carries subtext." — clipped, concrete fragments.',
+              user:
+                `Write a 2-3 line style description for a voice named "${profile.name}" with these dials (0-10): ` +
+                `density ${profile.controls.proseDensity}, vocabulary ${profile.controls.vocabulary}, dialogue ${profile.controls.dialogueFrequency}, ` +
+                `interiority ${profile.controls.interiorMonologue}, humor ${profile.controls.humor}, darkness ${profile.controls.darkness}, ` +
+                `romance ${profile.controls.romance}, violence ${profile.controls.violence}, surrealism ${profile.controls.surrealism}, pacing ${profile.controls.pacing}. ` +
+                'Output only the description.',
+              maxTokens: 150,
+            })}
+            onText={(t) => updateStyleProfile(profile.id, (d) => { d.description = t })}
+          />
+        </div>
         <textarea
           value={profile.description}
           rows={3}

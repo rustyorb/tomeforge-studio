@@ -1,17 +1,10 @@
 import React, { useState } from 'react'
 import type { Pacing, Project, StyleProfile } from '../../types'
+import { PACINGS } from '../../types'
 import { PRESETS } from '../../lib/presets'
 import type { GenOverrides, ProseKind } from './generation'
 
-const PACING_OPTIONS: Pacing[] = [
-  'slow-burn',
-  'balanced',
-  'fast',
-  'cinematic',
-  'lyrical',
-  'sparse',
-  'high-intensity',
-]
+const PACING_OPTIONS: readonly Pacing[] = PACINGS
 
 const CHAPTER_TOOLS: { kind: ProseKind; label: string; note: string }[] = [
   { kind: 'opening', label: 'Generate Chapter Opening', note: 'Ground the reader; set the chapter in motion' },

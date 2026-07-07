@@ -1,11 +1,10 @@
 import type { Pacing, StyleControls, StyleProfile } from '../../types'
+import { PACINGS } from '../../types'
 import { useStore } from '../../store/useStore'
 import { Field, Modal, Slider } from '../../components/ui'
 import { InspireButton } from '../../components/InspireButton'
 
-const PACING_OPTIONS: Pacing[] = [
-  'slow-burn', 'balanced', 'fast', 'cinematic', 'lyrical', 'sparse', 'high-intensity',
-]
+const PACING_OPTIONS: readonly Pacing[] = PACINGS
 
 type SliderKey = Exclude<keyof StyleControls, 'pacing'>
 

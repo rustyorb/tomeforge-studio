@@ -6,14 +6,14 @@ export type ID = string
 
 export type CanonMode = 'loose' | 'guided' | 'strict' | 'sandbox'
 
-export type Pacing =
-  | 'slow-burn'
-  | 'balanced'
-  | 'fast'
-  | 'cinematic'
-  | 'lyrical'
-  | 'sparse'
-  | 'high-intensity'
+export const PACINGS = [
+  'slow-burn', 'balanced', 'fast', 'cinematic', 'lyrical', 'sparse', 'high-intensity',
+  'breakneck', 'meandering', 'staccato', 'dreamlike', 'pulse-pounding', 'contemplative',
+  'creeping-dread', 'languid', 'whiplash', 'montage', 'simmering', 'clockwork',
+  'elegiac', 'frenetic', 'hypnotic', 'jaunty', 'brooding', 'headlong',
+] as const
+
+export type Pacing = (typeof PACINGS)[number]
 
 export interface SceneSnapshot {
   id: ID

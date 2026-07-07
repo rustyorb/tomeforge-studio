@@ -58,6 +58,21 @@ export default function Dashboard() {
     navigate('/write')
   }
 
+  const duplicateTome = (e: React.MouseEvent, p: Project) => {
+    e.stopPropagation()
+    const cloneId = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)
+    useStore.setState((s) => {
+      const clone: Project = JSON.parse(JSON.stringify(p))
+      clone.id = cloneId
+      clone.name = `${p.name} (copy)`
+      clone.createdAt = Date.now()
+      clone.updatedAt = Date.now()
+      clone.wordLog = {}
+      clone.wordLogStart = projectTotalWords(p)
+      return { projects: [...s.projects, clone] }
+    })
+  }
+
   const continueWriting = (e: React.MouseEvent, p: Project) => {
     e.stopPropagation()
     setActiveProject(p.id)
@@ -133,6 +148,13 @@ export default function Dashboard() {
                 <div className="row between">
                   <button className="btn small" onClick={(e) => continueWriting(e, p)}>
                     Continue writing →
+                  </button>
+                  <button
+                    className="btn ghost small"
+                    title="Duplicate this tome — a full copy for experiments"
+                    onClick={(e) => duplicateTome(e, p)}
+                  >
+                    ⧉
                   </button>
                   <button
                     className="btn ghost small danger"

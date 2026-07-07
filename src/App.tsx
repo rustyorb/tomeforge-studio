@@ -15,6 +15,7 @@ import SettingsPage from './features/settings'
 import Exporter from './features/exporter'
 import Insights from './features/insights'
 import GoalRing from './features/goals/GoalRing'
+import { APP_VERSION } from './version'
 import SillyTavern from './features/sillytavern'
 import Parlor from './features/parlor'
 
@@ -37,7 +38,7 @@ function Nav() {
       <div className="brand">
         Tome<span className="forge">Forge</span>
       </div>
-      <div className="brand-sub">Studio · stories that remember</div>
+      <div className="brand-sub">Studio · stories that remember · v{APP_VERSION}</div>
 
       {link('/', '◈', 'Projects')}
 

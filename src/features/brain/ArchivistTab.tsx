@@ -31,7 +31,12 @@ interface Candidate {
  * not yet in the Codex or Cast Ledger. Local, instant, free.
  */
 function findCandidates(project: Project): Candidate[] {
-  const text = project.chapters.flatMap((c) => c.scenes.map((s) => s.content)).join('\n\n')
+  // Scenes plus the active StoryQuest log — an RPG session is story canon too.
+  const questText = project.quest?.log.map((t) => t.text).join('\n\n') ?? ''
+  const text = [
+    project.chapters.flatMap((c) => c.scenes.map((s) => s.content)).join('\n\n'),
+    questText,
+  ].join('\n\n')
   if (!text.trim()) return []
 
   // Names already known to the brain (codex names + aliases + cast names).

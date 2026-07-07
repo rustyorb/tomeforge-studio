@@ -10,6 +10,25 @@ import type { Project, StyleProfile } from '../../types'
 import { streamMessage } from '../../lib/ai'
 import { tailOfManuscript } from '../../lib/context'
 
+/**
+ * Everything the story has actually generated so far: manuscript scenes PLUS
+ * the active StoryQuest adventure log (an RPG session with no prose written
+ * yet is still story canon — characters met there are real characters).
+ */
+export function storySource(project: Project, chars = 14000): string {
+  const parts: string[] = []
+  const ms = tailOfManuscript(project, chars)
+  if (ms.trim()) parts.push(`MANUSCRIPT (recent):\n${ms}`)
+  const q = project.quest
+  if (q?.log.length) {
+    const log = q.log
+      .map((t) => (t.role === 'gm' ? t.text : `> ${(t.command ?? 'do').toUpperCase()}: ${t.text}`))
+      .join('\n\n')
+    parts.push(`STORYQUEST ADVENTURE LOG (${q.mode} mode — also story canon):\n${log.slice(-chars)}`)
+  }
+  return parts.join('\n\n').slice(-Math.floor(chars * 1.4))
+}
+
 /** Forgiving JSON reader: fenced block (any tag), raw text, or bracket scan. */
 function looseJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
@@ -42,17 +61,17 @@ export async function discoverArray(
   _styleProfile: StyleProfile | null,
   taskDirective: string,
 ): Promise<Record<string, unknown>[]> {
-  const manuscript = tailOfManuscript(project, 14000)
+  const source = storySource(project, 14000)
   const full = await streamMessage({
     system:
-      'You are a structured-data extraction engine for a fiction studio. You read manuscript ' +
+      'You are a structured-data extraction engine for a fiction studio. You read story ' +
       'text and respond with ONLY a fenced ```json code block containing an array — no prose ' +
       'before or after it, no commentary, no apologies. If nothing qualifies, return ```json\n[]\n```.\n\n' +
       `TASK:\n${taskDirective}`,
     messages: [
       {
         role: 'user',
-        content: `MANUSCRIPT:\n${manuscript || '(empty)'}\n\nReturn the JSON array now.`,
+        content: `STORY TEXT:\n${source || '(empty — nothing written yet)'}\n\nReturn the JSON array now.`,
       },
     ],
     temperature: 0.2,

@@ -4,6 +4,7 @@ import type { Project, STBookStored, STCardStored } from '../../types'
 import { uid } from '../../lib/id'
 import { EmptyState, ErrorBanner } from '../../components/ui'
 import { parseSillyTavernFile } from '../../lib/import/sillytavern'
+import CardForge from './CardForge'
 
 type LibraryItem = STCardStored | STBookStored
 
@@ -148,6 +149,8 @@ export default function SillyTavernPage() {
           manuscript, not a chat.
         </p>
       </header>
+
+      <CardForge />
 
       <div className="card rise-1" style={{ marginBottom: 18 }}>
         <div className="row between wrap" style={{ gap: 12 }}>

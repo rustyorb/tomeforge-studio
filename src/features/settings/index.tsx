@@ -142,7 +142,7 @@ const THEME_TILES: { id: ThemeId; name: string; bg: string; accent: string; text
 ]
 
 function ImageGenCard() {
-  const { imageProvider, a1111Url, comfyUrl, imageSize, setImageGen } = useSettings()
+  const { imageProvider, a1111Url, comfyUrl, comfyCheckpoint, imageSize, setImageGen } = useSettings()
   return (
     <div className="card" style={{ marginTop: 16 }}>
       <div className="kicker" style={{ marginBottom: 10 }}>Image Generation — your own GPUs</div>
@@ -172,7 +172,7 @@ function ImageGenCard() {
       {imageProvider === 'a1111' && (
         <Field
           label="Automatic1111 URL"
-          hint={'Launch the webui with:  --api --cors-allow-origins "*"  (or list this app\'s origin) — otherwise the browser can\'t call it.'}
+          hint="Default '/a1111' rides the app's own proxy — no CORS flags needed (webui still needs --api). A full http:// URL calls it directly instead."
         >
           <input
             type="text"
@@ -184,12 +184,25 @@ function ImageGenCard() {
       {imageProvider === 'comfy' && (
         <Field
           label="ComfyUI URL"
-          hint={'Launch ComfyUI with:  --listen --enable-cors-header "*"  so a browser on another machine can call it.'}
+          hint="Default '/comfy' rides the app's own proxy (target set in vite.config.ts) — no CORS flags needed on the ComfyUI box. A full http:// URL calls it directly instead."
         >
           <input
             type="text"
             value={comfyUrl}
             onChange={(e) => setImageGen({ comfyUrl: e.target.value.trim() })}
+          />
+        </Field>
+      )}
+      {imageProvider === 'comfy' && (
+        <Field
+          label="Checkpoint (optional)"
+          hint="Blank = first available (alphabetical — risky if odd files sit in the folder). Partial names match, e.g. 'dreamshaper'."
+        >
+          <input
+            type="text"
+            value={comfyCheckpoint}
+            placeholder="e.g. DreamShaper_8_pruned.safetensors"
+            onChange={(e) => setImageGen({ comfyCheckpoint: e.target.value })}
           />
         </Field>
       )}

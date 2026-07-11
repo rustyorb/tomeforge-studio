@@ -62,12 +62,21 @@ async function comfyGetCheckpoint(base: string, signal?: AbortSignal): Promise<s
     string,
     { input?: { required?: { ckpt_name?: unknown[][] } } }
   >
-  const names = info.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0]
-  const first = Array.isArray(names) ? names[0] : null
-  if (typeof first !== 'string') {
+  const raw = info.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0]
+  const names = Array.isArray(raw) ? raw.filter((n): n is string => typeof n === 'string') : []
+  if (!names.length) {
     throw new Error('ComfyUI has no checkpoints available (CheckpointLoaderSimple is empty).')
   }
-  return first
+  const wanted = useSettings.getState().comfyCheckpoint.trim()
+  if (wanted) {
+    const hit = names.find((n) => n.toLowerCase() === wanted.toLowerCase())
+      ?? names.find((n) => n.toLowerCase().includes(wanted.toLowerCase()))
+    if (hit) return hit
+    throw new Error(
+      `Checkpoint "${wanted}" not found on ComfyUI. Available: ${names.slice(0, 8).join(', ')}${names.length > 8 ? ', …' : ''}`,
+    )
+  }
+  return names[0]
 }
 
 function comfyWorkflow(
@@ -149,9 +158,21 @@ async function comfyTxt2Img(req: ImageRequest): Promise<string> {
     if (!hist.ok) continue
     const data = (await hist.json()) as Record<
       string,
-      { outputs?: Record<string, { images?: { filename: string; subfolder: string; type: string }[] }> }
+      {
+        outputs?: Record<string, { images?: { filename: string; subfolder: string; type: string }[] }>
+        status?: { status_str?: string; messages?: [string, { node_type?: string; exception_message?: string }][] }
+      }
     >
-    const outputs = data[prompt_id]?.outputs
+    const entry = data[prompt_id]
+    if (!entry) continue
+    // Surface server-side execution errors instead of spinning to timeout.
+    if (entry.status?.status_str === 'error') {
+      const err = entry.status.messages?.find((m) => m[0] === 'execution_error')?.[1]
+      throw new Error(
+        `ComfyUI failed${err?.node_type ? ` at ${err.node_type}` : ''}: ${err?.exception_message?.slice(0, 300) ?? 'unknown error — check the server console'}`,
+      )
+    }
+    const outputs = entry.outputs
     if (!outputs) continue
     for (const node of Object.values(outputs)) {
       const img = node.images?.[0]

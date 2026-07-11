@@ -25,6 +25,8 @@ interface SettingsStore {
   imageProvider: 'off' | 'a1111' | 'comfy'
   a1111Url: string
   comfyUrl: string
+  /** ComfyUI checkpoint filename; blank = first available */
+  comfyCheckpoint: string
   /** "widthxheight" for generated images */
   imageSize: string
   setProvider: (id: string) => void
@@ -32,7 +34,7 @@ interface SettingsStore {
   setMaxTokens: (n: number) => void
   setTheme: (t: ThemeId) => void
   setDailyGoal: (n: number) => void
-  setImageGen: (patch: Partial<Pick<SettingsStore, 'imageProvider' | 'a1111Url' | 'comfyUrl' | 'imageSize'>>) => void
+  setImageGen: (patch: Partial<Pick<SettingsStore, 'imageProvider' | 'a1111Url' | 'comfyUrl' | 'comfyCheckpoint' | 'imageSize'>>) => void
 }
 
 function defaultProviders(): Record<string, ProviderConfig> {
@@ -57,8 +59,12 @@ export const useSettings = create<SettingsStore>()(
       theme: 'ember',
       dailyGoal: 0,
       imageProvider: 'off',
-      a1111Url: 'http://127.0.0.1:7860',
-      comfyUrl: 'http://192.168.0.69:8188',
+      // '/a1111' and '/comfy' ride the dev-server proxy (see vite.config.ts):
+      // same-origin, so the backends need no CORS flags. Absolute http:// URLs
+      // also work for direct calls.
+      a1111Url: '/a1111',
+      comfyUrl: '/comfy',
+      comfyCheckpoint: '',
       imageSize: '512x768',
       setProvider: (id) => set({ provider: id }),
       updateProvider: (id, patch) =>

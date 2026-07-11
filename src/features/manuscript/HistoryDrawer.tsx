@@ -3,6 +3,7 @@ import type { ID, Project, Scene, SceneSnapshot } from '../../types'
 import { Modal } from '../../components/ui'
 import { useStore } from '../../store/useStore'
 import { sceneDraft, wordCount } from './helpers'
+import { wordDiff } from './diff'
 
 const PREVIEW_CHARS = 700
 
@@ -13,6 +14,48 @@ function relTime(ts: number): string {
   const h = Math.floor(min / 60)
   if (h < 24) return `${h} h ago`
   return `${Math.floor(h / 24)} d ago`
+}
+
+/** Word-level snapshot ↔ current diff: red strikethrough out, green in. */
+function DiffView(props: { oldText: string; newText: string }) {
+  const d = wordDiff(props.oldText, props.newText)
+  if (d.tooLarge) {
+    return (
+      <div className="faint" style={{ fontSize: 13, padding: '8px 0' }}>
+        This scene is too large to diff comfortably — use the preview instead.
+      </div>
+    )
+  }
+  return (
+    <>
+      <div className="mono faint" style={{ fontSize: 10.5, margin: '6px 0' }}>
+        snapshot → now: <span style={{ color: 'var(--verdigris)' }}>+{d.added}</span>{' '}
+        <span style={{ color: 'var(--blood)' }}>−{d.removed}</span> words
+      </div>
+      <div className="prose-block ms-scroll ms-snap-preview">
+        {d.parts.map((p, i) =>
+          p.kind === 'same' ? (
+            <span key={i}>{p.text}</span>
+          ) : p.kind === 'add' ? (
+            <span key={i} style={{ background: 'rgba(111,174,155,0.18)', color: 'var(--verdigris)' }}>
+              {p.text}
+            </span>
+          ) : (
+            <span
+              key={i}
+              style={{
+                background: 'rgba(194,85,72,0.14)',
+                color: 'var(--blood)',
+                textDecoration: 'line-through',
+              }}
+            >
+              {p.text}
+            </span>
+          ),
+        )}
+      </div>
+    </>
+  )
 }
 
 /**
@@ -28,6 +71,7 @@ export default function HistoryDrawer(props: {
   const [open, setOpen] = useState(false)
   const [expandedId, setExpandedId] = useState<ID | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const [diffId, setDiffId] = useState<ID | null>(null)
   const snapshots = props.scene.snapshots ?? []
   const sceneId = props.scene.id
 
@@ -105,15 +149,26 @@ export default function HistoryDrawer(props: {
                     </div>
                     {isOpen && (
                       <>
-                        <div className="prose-block ms-scroll ms-snap-preview">
-                          {snap.content ? preview : <span className="faint">(empty scene)</span>}
-                        </div>
+                        {diffId === snap.id ? (
+                          <DiffView oldText={snap.content} newText={props.scene.content} />
+                        ) : (
+                          <div className="prose-block ms-scroll ms-snap-preview">
+                            {snap.content ? preview : <span className="faint">(empty scene)</span>}
+                          </div>
+                        )}
                         <div className="row wrap" style={{ marginTop: 10 }}>
-                          {truncated && !showAll && (
+                          {truncated && !showAll && diffId !== snap.id && (
                             <button className="btn small ghost" onClick={() => setShowAll(true)}>
                               Show all
                             </button>
                           )}
+                          <button
+                            className="btn small ghost"
+                            title="Compare this snapshot against the current scene"
+                            onClick={() => setDiffId(diffId === snap.id ? null : snap.id)}
+                          >
+                            {diffId === snap.id ? 'Preview' : '± Diff vs now'}
+                          </button>
                           <button className="btn small primary" onClick={() => restore(snap)}>
                             Restore
                           </button>

@@ -24,6 +24,13 @@ export type Graph = Record<string, GraphNode>
 export async function fetchCatalog(base: string): Promise<Catalog> {
   const res = await fetch(`${base.replace(/\/$/, '')}/object_info`)
   if (!res.ok) throw new Error(`ComfyUI /object_info error (${res.status}).`)
+  if ((res.headers.get('content-type') ?? '').includes('text/html')) {
+    throw new Error(
+      `"${base}" answered with a web page, not ComfyUI. If you're using the '/comfy' proxy ` +
+        'path, the dev server needs a restart (stop.bat then start.bat) to activate it — or set ' +
+        'an absolute URL like http://127.0.0.1:8188 in Settings → Image Generation.',
+    )
+  }
   return (await res.json()) as Catalog
 }
 

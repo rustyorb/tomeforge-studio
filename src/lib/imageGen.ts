@@ -55,9 +55,22 @@ async function a1111Txt2Img(req: ImageRequest): Promise<string> {
 
 // ---------- ComfyUI ----------
 
+/** Same-origin proxy paths answer with the SPA's HTML when the proxy isn't
+ *  active yet (dev server started before vite.config gained the route). */
+function guardHtml(res: Response, base: string): void {
+  if ((res.headers.get('content-type') ?? '').includes('text/html')) {
+    throw new Error(
+      `"${base}" answered with a web page, not the backend. If it's a '/comfy' or '/a1111' ` +
+        'proxy path, restart the dev server (stop.bat / start.bat) to activate the proxy — or ' +
+        'use an absolute URL like http://127.0.0.1:8188 in Settings.',
+    )
+  }
+}
+
 async function comfyGetCheckpoint(base: string, signal?: AbortSignal): Promise<string> {
   const res = await fetch(`${base}/object_info/CheckpointLoaderSimple`, { signal })
   if (!res.ok) throw new Error(`ComfyUI object_info error (${res.status}).`)
+  guardHtml(res, base)
   const info = (await res.json()) as Record<
     string,
     { input?: { required?: { ckpt_name?: unknown[][] } } }
@@ -213,6 +226,7 @@ export async function comfySubmit(
     if (e instanceof Error && e.name === 'AbortError') throw e
     throw new Error(`Could not reach ComfyUI at ${base}.`)
   }
+  guardHtml(submit, base)
   if (!submit.ok) {
     const detail = await submit.text().catch(() => submit.statusText)
     throw new Error(`ComfyUI rejected the workflow (${submit.status}): ${detail.slice(0, 200)}`)

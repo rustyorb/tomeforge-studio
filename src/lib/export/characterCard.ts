@@ -2,7 +2,7 @@
 // chara_card_v2 / v3 files: raw .json, or a generated .png cover with the
 // card data embedded in 'chara' (v2) and 'ccv3' (v3) tEXt chunks.
 
-import type { CharacterCard, Project } from '../../types'
+import type { CharacterCard, Project, STCardStored, STEntry } from '../../types'
 
 // ---------- card data assembly ----------
 
@@ -46,9 +46,25 @@ export function draftFromCharacter(project: Project, ch: CharacterCard): CardDra
   }
 }
 
+interface SpecBookEntry {
+  keys: string[]
+  content: string
+  extensions: Record<string, never>
+  enabled: boolean
+  insertion_order: number
+  name: string
+  constant: boolean
+  selective?: boolean
+  secondary_keys?: string[]
+}
+
+function specBook(name: string, entries: SpecBookEntry[]) {
+  return entries.length ? { name, extensions: {}, entries } : undefined
+}
+
 /** World lore that should travel with the card, as a spec character_book. */
 function characterBook(project: Project, cardName: string) {
-  const entries = project.codex
+  const entries: SpecBookEntry[] = project.codex
     .filter(
       (e) =>
         e.name.toLowerCase() !== cardName.toLowerCase() &&
@@ -64,13 +80,42 @@ function characterBook(project: Project, cardName: string) {
       insertion_order: i,
       name: e.name,
       constant: e.alwaysInclude,
+      selective: !!e.secondaryKeys?.length,
+      secondary_keys: e.secondaryKeys?.length ? e.secondaryKeys : undefined,
     }))
-  return entries.length
-    ? { name: `${project.name} — world lore`, extensions: {}, entries }
-    : undefined
+  return specBook(`${project.name} — world lore`, entries)
 }
 
-function cardData(project: Project, draft: CardDraft) {
+function bookFromEntries(name: string, entries: STEntry[]) {
+  return specBook(
+    name,
+    entries.map((e, i) => ({
+      keys: e.keys.slice(0, 10),
+      content: e.content,
+      extensions: {},
+      enabled: true,
+      insertion_order: i,
+      name: e.name,
+      constant: e.constant,
+      selective: !!e.secondaryKeys?.length,
+      secondary_keys: e.secondaryKeys?.length ? e.secondaryKeys : undefined,
+    })),
+  )
+}
+
+interface CardMeta {
+  creator_notes: string
+  system_prompt: string
+  post_history_instructions: string
+  alternate_greetings: string[]
+  creator: string
+}
+
+function assembleData(
+  draft: CardDraft,
+  meta: CardMeta,
+  book: ReturnType<typeof specBook>,
+) {
   return {
     name: draft.name,
     description: draft.description,
@@ -78,16 +123,88 @@ function cardData(project: Project, draft: CardDraft) {
     scenario: draft.scenario,
     first_mes: draft.first_mes,
     mes_example: draft.mes_example,
-    creator_notes: `Forged in TomeForge Studio from the tome "${project.name}".`,
-    system_prompt: '',
-    post_history_instructions: '',
-    alternate_greetings: [],
-    character_book: characterBook(project, draft.name),
+    creator_notes: meta.creator_notes,
+    system_prompt: meta.system_prompt,
+    post_history_instructions: meta.post_history_instructions,
+    alternate_greetings: meta.alternate_greetings,
+    character_book: book,
     tags: draft.tags,
-    creator: 'TomeForge Studio',
+    creator: meta.creator,
     character_version: '1.0',
     extensions: {},
   }
+}
+
+function cardData(project: Project, draft: CardDraft) {
+  return assembleData(
+    draft,
+    {
+      creator_notes: `Forged in TomeForge Studio from the tome "${project.name}".`,
+      system_prompt: '',
+      post_history_instructions: '',
+      alternate_greetings: [],
+      creator: 'TomeForge Studio',
+    },
+    characterBook(project, draft.name),
+  )
+}
+
+/** Library items export with full round-trip fidelity — nothing imported is lost. */
+function libraryData(card: STCardStored) {
+  return assembleData(
+    {
+      name: card.name,
+      description: card.description,
+      personality: card.personality,
+      scenario: card.scenario,
+      first_mes: card.firstMes ?? '',
+      mes_example: card.mesExample,
+      tags: card.tags,
+    },
+    {
+      creator_notes: card.creatorNotes ?? '',
+      system_prompt: card.systemPrompt ?? '',
+      post_history_instructions: card.postHistory ?? '',
+      alternate_greetings: card.alternateGreetings ?? [],
+      creator: card.creator || 'TomeForge Studio',
+    },
+    bookFromEntries(`${card.name} — lorebook`, card.book),
+  )
+}
+
+export function libraryToV2Json(card: STCardStored): string {
+  return JSON.stringify({ spec: 'chara_card_v2', spec_version: '2.0', data: libraryData(card) }, null, 2)
+}
+
+export function libraryToV3Json(card: STCardStored): string {
+  return JSON.stringify(
+    {
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
+      data: {
+        ...libraryData(card),
+        nickname: '',
+        creator_notes_multilingual: {},
+        source: ['tomeforge-studio'],
+        group_only_greetings: [],
+        creation_date: Math.floor(Date.now() / 1000),
+        modification_date: Math.floor(Date.now() / 1000),
+      },
+    },
+    null,
+    2,
+  )
+}
+
+export async function libraryCardPng(card: STCardStored): Promise<Blob> {
+  const base = await coverPng(card.name)
+  const withData = embedInPng(base, [
+    { keyword: 'chara', json: libraryToV2Json(card) },
+    { keyword: 'ccv3', json: libraryToV3Json(card) },
+  ])
+  const buf = new ArrayBuffer(withData.length)
+  new Uint8Array(buf).set(withData)
+  return new Blob([buf], { type: 'image/png' })
 }
 
 export function toV2Json(project: Project, draft: CardDraft): string {

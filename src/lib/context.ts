@@ -12,13 +12,21 @@ const CANON_DIRECTIVES: Record<Project['canonMode'], string> = {
     'Canon mode: SANDBOX. This is an experimental branch. Feel free to explore, but note this text is non-canonical.',
 }
 
-/** Find codex entries mentioned (by name or alias) in the given text. */
+/**
+ * Find codex entries mentioned (by name or alias) in the given text.
+ * SillyTavern-style AND logic: when an entry has secondaryKeys, a primary
+ * match also requires one secondary key to appear.
+ */
 export function matchCodexEntries(codex: CodexEntry[], text: string): CodexEntry[] {
   const lower = text.toLowerCase()
   return codex.filter((entry) => {
     if (entry.alwaysInclude) return true
     const keys = [entry.name, ...entry.aliases].filter((k) => k.trim().length > 1)
-    return keys.some((k) => lower.includes(k.toLowerCase()))
+    const primary = keys.some((k) => lower.includes(k.toLowerCase()))
+    if (!primary) return false
+    const secondary = (entry.secondaryKeys ?? []).filter((k) => k.trim().length > 1)
+    if (!secondary.length) return true
+    return secondary.some((k) => lower.includes(k.toLowerCase()))
   })
 }
 

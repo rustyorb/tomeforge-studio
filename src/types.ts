@@ -75,6 +75,9 @@ export interface CodexEntry {
   /** Always inject into AI context regardless of keyword match */
   alwaysInclude: boolean
   updatedAt: number
+  /** ST-style AND matching: when set, a primary (name/alias) match also
+   *  requires one of these to appear in the recent text */
+  secondaryKeys?: string[]
 }
 
 export interface CharacterCard {
@@ -201,6 +204,8 @@ export interface STEntry {
   keys: string[]
   content: string
   constant: boolean
+  /** ST "keysecondary": entry triggers only when a primary AND a secondary key match */
+  secondaryKeys?: string[]
 }
 
 export interface STCardStored {
@@ -214,6 +219,13 @@ export interface STCardStored {
   tags: string[]
   book: STEntry[]
   importedAt: number
+  /** Round-trip fidelity: fields ST cards carry that TomeForge doesn't display */
+  firstMes?: string
+  systemPrompt?: string
+  postHistory?: string
+  alternateGreetings?: string[]
+  creatorNotes?: string
+  creator?: string
 }
 
 export interface STBookStored {

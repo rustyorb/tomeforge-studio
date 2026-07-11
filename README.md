@@ -81,7 +81,7 @@ flowchart TD
 | **❦ Voiceprint** | Style profiles: prose density, vocabulary, dialogue frequency, darkness, surrealism… plus POV and tense locks |
 | **◍ Insights** | GitHub-style writing heatmap, streaks, daily goal ring with ember-burst, manuscript composition stats |
 | **⇲ Import & Export** | EPUB **with generated cover art** · styled HTML · Markdown · RTF (Word) · plain text · Story Bible · full JSON backup/restore · **manuscript import** (.txt/.md → chapters & scenes) |
-| **❖ SillyTavern** | Two-way bridge: a persistent library for imported cards (V1/V2/V3, .json/.png) and lorebooks — **plus the Card Forge**, which exports any Cast Ledger character *back out* as a spec V2/V3 card (.json, or .png with generated cover + embedded data + Codex lorebook) usable in SillyTavern and friends |
+| **❖ SillyTavern** | A full ST studio: **lossless round-trip** import/edit/export of cards (V1/V2/V3, .json/.png — system prompt, greetings, creator credits all preserved) and lorebooks · a **card & worldbook editor** (entries, trigger keys, secondary AND-keys) · **✨ AI generators** that forge original cards and whole worldbooks from a prompt · the **Card Forge** (Cast Ledger → spec card with Codex lorebook) · Codex ⇄ World Info both ways · secondary-key matching parity inside TomeForge's own context engine |
 
 Plus **✨ Inspire buttons** wherever a blank field stares back — new-tome ideas, quest premises, memory drafts, director's notes, voice descriptions.
 

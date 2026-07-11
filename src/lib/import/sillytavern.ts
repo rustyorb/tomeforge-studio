@@ -9,6 +9,7 @@ export interface STBookEntry {
   keys: string[]
   content: string
   constant: boolean
+  secondaryKeys?: string[]
 }
 
 export interface STCard {
@@ -22,6 +23,10 @@ export interface STCard {
   creatorNotes: string
   tags: string[]
   book: STBookEntry[]
+  systemPrompt: string
+  postHistory: string
+  alternateGreetings: string[]
+  creator: string
 }
 
 export interface STLorebook {
@@ -98,11 +103,16 @@ function normalizeBookEntries(raw: unknown): STBookEntry[] {
     ].filter((k): k is string => typeof k === 'string' && k.trim().length > 0)
     const content = str(e.content)
     if (!content.trim()) continue
+    const secondary = [
+      ...(Array.isArray(e.secondary_keys) ? e.secondary_keys : []),
+      ...(Array.isArray(e.keysecondary) ? e.keysecondary : []),
+    ].filter((k): k is string => typeof k === 'string' && k.trim().length > 0)
     out.push({
       name: str(e.name) || str(e.comment) || keys[0] || 'Imported entry',
       keys,
       content,
       constant: e.constant === true,
+      secondaryKeys: secondary.length ? secondary : undefined,
     })
   }
   return out
@@ -120,6 +130,12 @@ function normalizeCard(data: Record<string, unknown>): STCard {
     creatorNotes: str(data.creator_notes),
     tags: Array.isArray(data.tags) ? data.tags.filter((t): t is string => typeof t === 'string') : [],
     book: normalizeBookEntries(data.character_book),
+    systemPrompt: str(data.system_prompt),
+    postHistory: str(data.post_history_instructions),
+    alternateGreetings: Array.isArray(data.alternate_greetings)
+      ? data.alternate_greetings.filter((g): g is string => typeof g === 'string')
+      : [],
+    creator: str(data.creator),
   }
 }
 

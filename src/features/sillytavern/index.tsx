@@ -4,9 +4,12 @@ import type { Project, STBookStored, STCardStored } from '../../types'
 import { uid } from '../../lib/id'
 import { EmptyState, ErrorBanner } from '../../components/ui'
 import { parseSillyTavernFile } from '../../lib/import/sillytavern'
-import { codexToWorldInfo } from '../../lib/export/worldInfo'
-import { downloadText, slugify } from '../../lib/export/download'
+import { codexToWorldInfo, lorebookToWorldInfo } from '../../lib/export/worldInfo'
+import { libraryCardPng, libraryToV2Json } from '../../lib/export/characterCard'
+import { downloadBlob, downloadText, slugify } from '../../lib/export/download'
 import CardForge from './CardForge'
+import LibraryEditor from './LibraryEditor'
+import Generators from './Generators'
 
 type LibraryItem = STCardStored | STBookStored
 
@@ -28,6 +31,7 @@ function addItemToProject(
       content: string,
       aliases: string[],
       always: boolean,
+      secondaryKeys?: string[],
     ) => {
       if (codexNames.has(name.toLowerCase())) {
         skipped++
@@ -42,6 +46,7 @@ function addItemToProject(
         content,
         alwaysInclude: always,
         updatedAt: Date.now(),
+        secondaryKeys: secondaryKeys?.length ? secondaryKeys : undefined,
       })
       codexAdded++
     }
@@ -70,9 +75,13 @@ function addItemToProject(
         })
         castAdded++
       }
-      for (const e of item.book) addCodex(e.name, 'other', e.content, e.keys, e.constant)
+      for (const e of item.book) {
+        addCodex(e.name, 'other', e.content, e.keys, e.constant, e.secondaryKeys)
+      }
     } else {
-      for (const e of item.entries) addCodex(e.name, 'other', e.content, e.keys, e.constant)
+      for (const e of item.entries) {
+        addCodex(e.name, 'other', e.content, e.keys, e.constant, e.secondaryKeys)
+      }
     }
   })
   return (
@@ -92,6 +101,24 @@ export default function SillyTavernPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [targetId, setTargetId] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [editId, setEditId] = useState<string | null>(null)
+
+  const exportItem = async (item: LibraryItem) => {
+    setError(null)
+    try {
+      if (item.kind === 'card') {
+        downloadBlob(`${slugify(item.name)}-card.png`, await libraryCardPng(item))
+      } else {
+        downloadText(
+          `${slugify(item.name)}-worldinfo.json`,
+          lorebookToWorldInfo(item.name, item.entries),
+          'application/json',
+        )
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
   const fileRef = useRef<HTMLInputElement>(null)
 
   const target = projects.find((p) => p.id === (targetId ?? activeProjectId)) ?? projects[0] ?? null
@@ -118,6 +145,12 @@ export default function SillyTavernPage() {
                 tags: parsed.tags,
                 book: parsed.book,
                 importedAt: Date.now(),
+                firstMes: parsed.firstMes,
+                systemPrompt: parsed.systemPrompt,
+                postHistory: parsed.postHistory,
+                alternateGreetings: parsed.alternateGreetings,
+                creatorNotes: parsed.creatorNotes,
+                creator: parsed.creator,
               }
             : {
                 id: uid(),
@@ -152,7 +185,14 @@ export default function SillyTavernPage() {
         </p>
       </header>
 
+      <Generators />
+
       <CardForge />
+
+      {editId && (() => {
+        const item = library.find((x) => x.id === editId)
+        return item ? <LibraryEditor item={item} onClose={() => setEditId(null)} /> : null
+      })()}
 
       <div className="card rise-1" style={{ marginBottom: 18 }}>
         <div className="row between wrap" style={{ gap: 12 }}>
@@ -226,6 +266,39 @@ export default function SillyTavernPage() {
                   >
                     {openId === item.id ? 'Hide' : 'View'}
                   </button>
+                  <button
+                    className="btn ghost small"
+                    title="Edit fields, entries, and trigger keys"
+                    onClick={() => setEditId(item.id)}
+                  >
+                    ✎ Edit
+                  </button>
+                  <button
+                    className="btn small"
+                    title={
+                      item.kind === 'card'
+                        ? 'Export as .png card (v2+v3 embedded) — .json also available via Edit view'
+                        : 'Export as SillyTavern World Info .json'
+                    }
+                    onClick={() => void exportItem(item)}
+                  >
+                    ⬆ {item.kind === 'card' ? 'PNG' : 'World Info'}
+                  </button>
+                  {item.kind === 'card' && (
+                    <button
+                      className="btn ghost small"
+                      title="Export as V2 .json"
+                      onClick={() =>
+                        downloadText(
+                          `${slugify(item.name)}-v2.json`,
+                          libraryToV2Json(item),
+                          'application/json',
+                        )
+                      }
+                    >
+                      ⬆ JSON
+                    </button>
+                  )}
                   <button
                     className="btn small primary"
                     disabled={!target}

@@ -14,6 +14,7 @@ interface Store {
   stLibrary: (STCardStored | STBookStored)[]
   addToSTLibrary: (items: (STCardStored | STBookStored)[]) => void
   removeFromSTLibrary: (id: string) => void
+  updateSTLibraryItem: (id: string, recipe: (item: STCardStored | STBookStored) => void) => void
 
   setActiveProject: (id: string | null) => void
   createProject: (name: string, genre: string, logline: string) => string
@@ -93,6 +94,12 @@ export const useStore = create<Store>()(
       removeFromSTLibrary: (id) =>
         set((s) => {
           s.stLibrary = (s.stLibrary ?? []).filter((x) => x.id !== id)
+        }),
+
+      updateSTLibraryItem: (id, recipe) =>
+        set((s) => {
+          const item = (s.stLibrary ?? []).find((x) => x.id === id)
+          if (item) recipe(item)
         }),
 
       setActiveProject: (id) =>

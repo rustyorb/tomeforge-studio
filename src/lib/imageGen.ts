@@ -195,7 +195,7 @@ async function comfyTxt2Img(req: ImageRequest): Promise<string> {
 }
 
 /** Submit a workflow graph, poll history, and return the image as a data URL. */
-async function comfySubmit(
+export async function comfySubmit(
   base: string,
   graph: unknown,
   signal?: AbortSignal,

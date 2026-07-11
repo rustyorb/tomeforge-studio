@@ -20,6 +20,7 @@ const PAGES: { to: string; glyph: string; name: string; keywords: string }[] = [
   { to: '/sillytavern', glyph: '❖', name: 'SillyTavern', keywords: 'import character card lorebook world info png' },
   { to: '/parlor', glyph: '❝', name: 'The Parlor', keywords: 'talk chat interview character conversation salon' },
   { to: '/atlas', glyph: '🗺', name: 'The Atlas', keywords: 'map world terrain places pins cartography' },
+  { to: '/workflowforge', glyph: '⛭', name: 'Workflow Forge', keywords: 'comfyui workflow nodes generate image gpu' },
   { to: '/settings', glyph: '⚙', name: 'Settings', keywords: 'api key provider model theme appearance' },
 ]
 

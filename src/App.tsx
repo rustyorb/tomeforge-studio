@@ -19,6 +19,7 @@ import { APP_VERSION } from './version'
 import SillyTavern from './features/sillytavern'
 import Parlor from './features/parlor'
 import Atlas from './features/atlas'
+import WorkflowForge from './features/workflowforge'
 
 function Nav() {
   const project = useActiveProject()
@@ -52,6 +53,9 @@ function Nav() {
 
       <div className="nav-section">The World</div>
       {link('/atlas', '🗺', 'The Atlas', needsProject)}
+
+      <div className="nav-section">The Rig</div>
+      {link('/workflowforge', '⛭', 'Workflow Forge')}
 
       <div className="nav-section">Voice</div>
       {link('/voiceprint', '❦', 'Voiceprint')}
@@ -146,6 +150,7 @@ export default function App() {
           <Route path="/quest" element={project ? <StoryQuest /> : <Navigate to="/" />} />
           <Route path="/parlor" element={project ? <Parlor /> : <Navigate to="/" />} />
           <Route path="/atlas" element={project ? <Atlas /> : <Navigate to="/" />} />
+          <Route path="/workflowforge" element={<WorkflowForge />} />
           <Route path="/voiceprint" element={<Voiceprint />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/export" element={<Exporter />} />

@@ -28,7 +28,7 @@ export async function fetchCatalog(base: string): Promise<Catalog> {
 }
 
 /** Core nodes the LLM should reach for — full schemas included in the digest. */
-const CORE_NODES = [
+export const CORE_NODES = [
   'CheckpointLoaderSimple', 'CLIPTextEncode', 'CLIPTextEncodeSDXL', 'KSampler',
   'KSamplerAdvanced', 'EmptyLatentImage', 'VAEDecode', 'VAEEncode', 'SaveImage',
   'LoraLoader', 'LoraLoaderModelOnly', 'LoadImage', 'ImageScale', 'ImageScaleBy',
@@ -76,6 +76,49 @@ export function digestCatalog(catalog: Catalog): string {
     '\n\nOTHER AVAILABLE NODE class_types (names only — use only if truly needed):\n' +
     others.join(', ')
   )
+}
+
+/** Full schema lines for specific (exotic) nodes, same format as the core digest. */
+export function schemasFor(catalog: Catalog, names: string[]): string {
+  const lines: string[] = []
+  for (const name of names) {
+    const def = catalog[name]
+    if (!def) continue
+    const req = Object.entries(def.input?.required ?? {})
+      .map(([k, v]) => `${k}: ${typeLabel(v as unknown[])}`)
+      .join(', ')
+    const opt = Object.keys(def.input?.optional ?? {}).join(', ')
+    lines.push(
+      `${name}(${req}${opt ? ` | optional: ${opt}` : ''}) -> [${(def.output ?? []).join(', ')}]`,
+    )
+  }
+  return lines.join('\n')
+}
+
+/** Random non-core nodes worth showing off — skips obvious plumbing/util names. */
+export function sampleExotics(catalog: Catalog, count = 8): string[] {
+  const boring = /^(Note|Reroute|PrimitiveNode|MarkdownNote)$|Passthrough|Pipe(In|Out)?$|Switch$|^Get|^Set/
+  const pool = Object.keys(catalog).filter((n) => !CORE_NODES.includes(n) && !boring.test(n))
+  const picked: string[] = []
+  const used = new Set<number>()
+  while (picked.length < Math.min(count, pool.length)) {
+    const i = Math.floor(Math.random() * pool.length)
+    if (used.has(i)) continue
+    used.add(i)
+    picked.push(pool[i])
+  }
+  return picked
+}
+
+/** Which nodes in a graph are outside the core set — the fun ones. */
+export function exoticNodesUsed(graph: Graph): string[] {
+  return [
+    ...new Set(
+      Object.values(graph)
+        .map((n) => n.class_type ?? '')
+        .filter((ct) => ct && !CORE_NODES.includes(ct)),
+    ),
+  ]
 }
 
 export interface ValidationIssue {

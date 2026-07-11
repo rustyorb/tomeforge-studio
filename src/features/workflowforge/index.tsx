@@ -5,7 +5,9 @@ import { comfySubmit } from '../../lib/imageGen'
 import { looseJson } from '../../lib/looseJson'
 import { downloadText } from '../../lib/export/download'
 import { ErrorBanner, Field } from '../../components/ui'
-import { digestCatalog, fetchCatalog, validateGraph } from './catalog'
+import {
+  digestCatalog, exoticNodesUsed, fetchCatalog, sampleExotics, schemasFor, validateGraph,
+} from './catalog'
 import type { Catalog, Graph, ValidationIssue } from './catalog'
 
 const RULES = `You build ComfyUI workflows in API format: a single JSON object where each key is a
@@ -58,8 +60,8 @@ export default function WorkflowForgePage() {
       : null
   }
 
-  const forge = async () => {
-    if (!request.trim() || busy) return
+  const forge = async (surprise = false) => {
+    if ((!surprise && !request.trim()) || busy) return
     setError(null)
     setGraph(null)
     setIssues([])
@@ -75,11 +77,26 @@ export default function WorkflowForgePage() {
         catalogRef.current = await fetchCatalog(comfyUrl)
       }
       const catalog = catalogRef.current
-      const digest = digestCatalog(catalog)
+      let digest = digestCatalog(catalog)
+      let ask = `Build this workflow: ${request.trim()}`
+
+      // Surprise mode: dig 8 random exotic nodes out of the hoard, hand the
+      // model their full schemas, and demand it actually uses one.
+      if (surprise) {
+        const exotics = sampleExotics(catalog, 8)
+        digest +=
+          '\n\nEXOTIC NODES (full schemas — the user owns these but has never used them):\n' +
+          schemasFor(catalog, exotics)
+        ask =
+          `Build an interesting, working txt2img workflow that MEANINGFULLY uses at least one ` +
+          `of these exotic nodes: ${exotics.join(', ')}. ` +
+          (request.trim() ? `Theme/request: ${request.trim()}. ` : '') +
+          'Only use an exotic node in a way its schema supports; wire everything else from core nodes.'
+      }
 
       // 2. Generate.
       setStage('generating')
-      let g = await askModel(digest, `Build this workflow: ${request.trim()}`, controller.signal)
+      let g = await askModel(digest, ask, controller.signal)
       if (!g) throw new Error('The model returned no readable workflow — try again.')
       let problems = validateGraph(g, catalog)
 
@@ -176,9 +193,18 @@ export default function WorkflowForgePage() {
               ■ Stop
             </button>
           ) : (
-            <button className="btn primary" disabled={!request.trim()} onClick={() => void forge()}>
-              ⛭ Forge workflow
-            </button>
+            <>
+              <button className="btn primary" disabled={!request.trim()} onClick={() => void forge()}>
+                ⛭ Forge workflow
+              </button>
+              <button
+                className="btn"
+                title="Grab random exotic nodes from your collection and build something that actually uses one"
+                onClick={() => void forge(true)}
+              >
+                🎲 Surprise me with my own nodes
+              </button>
+            </>
           )}
           {stage !== 'idle' && (
             <span className="mono faint">
@@ -206,6 +232,15 @@ export default function WorkflowForgePage() {
                 )}
                 {repaired && <span className="tag brass" style={{ marginLeft: 6 }}>self-repaired</span>}
               </h3>
+              {exoticNodesUsed(graph).length > 0 && (
+                <div className="row wrap" style={{ marginTop: 6, gap: 4 }}>
+                  {exoticNodesUsed(graph).map((n) => (
+                    <span key={n} className="tag ember" title="A node from your collection, finally put to work">
+                      🎲 {n}
+                    </span>
+                  ))}
+                </div>
+              )}
               <p className="mono faint" style={{ fontSize: 10.5, marginTop: 6, maxWidth: 640 }}>
                 {nodeSummary}
               </p>

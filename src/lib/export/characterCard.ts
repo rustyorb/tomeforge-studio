@@ -360,9 +360,15 @@ export async function coverPng(name: string): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer())
 }
 
-/** Full pipeline: cover + embedded v2 ('chara') and v3 ('ccv3') data. */
-export async function characterCardPng(project: Project, draft: CardDraft): Promise<Blob> {
-  const base = await coverPng(draft.name)
+/** Full pipeline: cover + embedded v2 ('chara') and v3 ('ccv3') data.
+ *  Pass baseImage (raw PNG bytes, e.g. locally-generated art) to use it
+ *  instead of the generated gradient cover. */
+export async function characterCardPng(
+  project: Project,
+  draft: CardDraft,
+  baseImage?: Uint8Array,
+): Promise<Blob> {
+  const base = baseImage ?? (await coverPng(draft.name))
   const withData = embedInPng(base, [
     { keyword: 'chara', json: toV2Json(project, draft) },
     { keyword: 'ccv3', json: toV3Json(project, draft) },

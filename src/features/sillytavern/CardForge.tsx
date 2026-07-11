@@ -3,6 +3,8 @@ import { useStore } from '../../store/useStore'
 import { Field, ErrorBanner } from '../../components/ui'
 import { InspireButton } from '../../components/InspireButton'
 import { buildStoryContext } from '../../lib/context'
+import { dataUrlToBytes, generateImage } from '../../lib/imageGen'
+import { useSettings } from '../../store/useSettings'
 import { downloadBlob, downloadText, slugify } from '../../lib/export/download'
 import {
   characterCardPng, draftFromCharacter, toV2Json, toV3Json,
@@ -21,6 +23,35 @@ export default function CardForge() {
   const [draft, setDraft] = useState<CardDraft | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const imageProvider = useSettings((s) => s.imageProvider)
+  const [portrait, setPortrait] = useState<string | null>(null)
+  const [artStyle, setArtStyle] = useState('digital painting, dramatic lighting, detailed face')
+  const [painting, setPainting] = useState(false)
+  const paintAbort = useState(() => ({ current: null as AbortController | null }))[0]
+
+  const paintPortrait = async () => {
+    if (!draft || painting) return
+    setPainting(true)
+    setError(null)
+    const controller = new AbortController()
+    paintAbort.current = controller
+    try {
+      const dataUrl = await generateImage({
+        prompt:
+          `portrait of ${draft.name}, ${draft.description.slice(0, 300).replace(/\n/g, ' ')}, ` +
+          `${artStyle}`,
+        signal: controller.signal,
+      })
+      setPortrait(dataUrl)
+    } catch (e) {
+      if (!(e instanceof Error && e.name === 'AbortError')) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    } finally {
+      setPainting(false)
+      paintAbort.current = null
+    }
+  }
 
   const project = projects.find((p) => p.id === (projectId ?? activeProjectId)) ?? projects[0] ?? null
   const character = project?.characters.find((c) => c.id === charId) ?? null
@@ -46,7 +77,8 @@ export default function CardForge() {
     setBusy(true)
     setError(null)
     try {
-      downloadBlob(`${slugify(draft.name)}-card.png`, await characterCardPng(project, draft))
+      const base = portrait ? dataUrlToBytes(portrait) : undefined
+      downloadBlob(`${slugify(draft.name)}-card.png`, await characterCardPng(project, draft, base))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -143,10 +175,52 @@ export default function CardForge() {
             <textarea rows={4} value={draft.first_mes} onChange={(e) => patch({ first_mes: e.target.value })} />
           </Field>
 
+          {imageProvider !== 'off' && (
+            <div className="card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+              <div className="kicker" style={{ marginBottom: 8 }}>Portrait — painted on your GPU</div>
+              <div className="row wrap" style={{ gap: 10, alignItems: 'flex-end' }}>
+                <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 220 }}>
+                  <label>Art style</label>
+                  <input
+                    type="text"
+                    value={artStyle}
+                    onChange={(e) => setArtStyle(e.target.value)}
+                  />
+                </div>
+                {painting ? (
+                  <button className="btn danger" onClick={() => paintAbort.current?.abort()}>
+                    Stop
+                  </button>
+                ) : (
+                  <button className="btn" onClick={() => void paintPortrait()}>
+                    🎨 {portrait ? 'Repaint' : 'Paint portrait'}
+                  </button>
+                )}
+                {portrait && (
+                  <button className="btn ghost small" onClick={() => setPortrait(null)}>
+                    ✕ Use gradient cover instead
+                  </button>
+                )}
+              </div>
+              {painting && (
+                <div className="mono faint" style={{ marginTop: 8 }}>
+                  <span className="spinner" /> The GPU is dreaming… (ComfyUI can take a minute)
+                </div>
+              )}
+              {portrait && (
+                <img
+                  src={portrait}
+                  alt="Card portrait"
+                  style={{ marginTop: 10, maxWidth: 180, borderRadius: 6, border: '1px solid var(--line)' }}
+                />
+              )}
+            </div>
+          )}
+
           <ErrorBanner error={error} />
           <div className="row wrap" style={{ marginTop: 6 }}>
             <button className="btn primary" disabled={busy} onClick={() => void downloadPng()}>
-              {busy ? <span className="spinner" /> : '⬇'} PNG card (v2+v3 embedded)
+              {busy ? <span className="spinner" /> : '⬇'} PNG card {portrait ? '(your art + data)' : '(v2+v3 embedded)'}
             </button>
             <button
               className="btn"

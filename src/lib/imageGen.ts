@@ -1,0 +1,195 @@
+// Local image generation — bring your own GPU. Two backends:
+//   • Automatic1111 (webui --api):    POST /sdapi/v1/txt2img
+//   • ComfyUI:                        POST /prompt + poll /history, fetch /view
+// Both must allow browser CORS (see the hints in Settings).
+
+import { useSettings } from '../store/useSettings'
+
+export interface ImageRequest {
+  prompt: string
+  negative?: string
+  signal?: AbortSignal
+}
+
+function parseSize(size: string): { width: number; height: number } {
+  const m = size.match(/^(\d+)x(\d+)$/)
+  return m ? { width: Number(m[1]), height: Number(m[2]) } : { width: 512, height: 768 }
+}
+
+const DEFAULT_NEGATIVE =
+  'lowres, bad anatomy, bad hands, text, watermark, signature, blurry, deformed'
+
+// ---------- Automatic1111 ----------
+
+async function a1111Txt2Img(req: ImageRequest): Promise<string> {
+  const { a1111Url, imageSize } = useSettings.getState()
+  const { width, height } = parseSize(imageSize)
+  let res: Response
+  try {
+    res = await fetch(`${a1111Url.replace(/\/$/, '')}/sdapi/v1/txt2img`, {
+      method: 'POST',
+      signal: req.signal,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        prompt: req.prompt,
+        negative_prompt: req.negative ?? DEFAULT_NEGATIVE,
+        steps: 24,
+        width,
+        height,
+        cfg_scale: 7,
+        sampler_name: 'Euler a',
+      }),
+    })
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    throw new Error(
+      `Could not reach Automatic1111 at ${a1111Url}. Is it running with --api --cors-allow-origins?`,
+    )
+  }
+  if (!res.ok) throw new Error(`Automatic1111 error (${res.status}): ${res.statusText}`)
+  const body = (await res.json()) as { images?: string[] }
+  const b64 = body.images?.[0]
+  if (!b64) throw new Error('Automatic1111 returned no image.')
+  return `data:image/png;base64,${b64}`
+}
+
+// ---------- ComfyUI ----------
+
+async function comfyGetCheckpoint(base: string, signal?: AbortSignal): Promise<string> {
+  const res = await fetch(`${base}/object_info/CheckpointLoaderSimple`, { signal })
+  if (!res.ok) throw new Error(`ComfyUI object_info error (${res.status}).`)
+  const info = (await res.json()) as Record<
+    string,
+    { input?: { required?: { ckpt_name?: unknown[][] } } }
+  >
+  const names = info.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0]
+  const first = Array.isArray(names) ? names[0] : null
+  if (typeof first !== 'string') {
+    throw new Error('ComfyUI has no checkpoints available (CheckpointLoaderSimple is empty).')
+  }
+  return first
+}
+
+function comfyWorkflow(
+  ckpt: string,
+  prompt: string,
+  negative: string,
+  width: number,
+  height: number,
+  seed: number,
+) {
+  return {
+    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: ckpt } },
+    '2': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['1', 1] } },
+    '3': { class_type: 'CLIPTextEncode', inputs: { text: negative, clip: ['1', 1] } },
+    '4': { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } },
+    '5': {
+      class_type: 'KSampler',
+      inputs: {
+        seed,
+        steps: 24,
+        cfg: 7,
+        sampler_name: 'euler_ancestral',
+        scheduler: 'normal',
+        denoise: 1,
+        model: ['1', 0],
+        positive: ['2', 0],
+        negative: ['3', 0],
+        latent_image: ['4', 0],
+      },
+    },
+    '6': { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
+    '7': { class_type: 'SaveImage', inputs: { images: ['6', 0], filename_prefix: 'tomeforge' } },
+  }
+}
+
+async function comfyTxt2Img(req: ImageRequest): Promise<string> {
+  const { comfyUrl, imageSize } = useSettings.getState()
+  const base = comfyUrl.replace(/\/$/, '')
+  const { width, height } = parseSize(imageSize)
+
+  let ckpt: string
+  try {
+    ckpt = await comfyGetCheckpoint(base, req.signal)
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    throw new Error(
+      `Could not reach ComfyUI at ${comfyUrl}. Is it running with --enable-cors-header '*' ?`,
+    )
+  }
+
+  const clientId = Math.random().toString(36).slice(2)
+  const submit = await fetch(`${base}/prompt`, {
+    method: 'POST',
+    signal: req.signal,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      client_id: clientId,
+      prompt: comfyWorkflow(
+        ckpt,
+        req.prompt,
+        req.negative ?? DEFAULT_NEGATIVE,
+        width,
+        height,
+        Math.floor(Math.random() * 2 ** 31),
+      ),
+    }),
+  })
+  if (!submit.ok) {
+    const detail = await submit.text().catch(() => submit.statusText)
+    throw new Error(`ComfyUI rejected the workflow (${submit.status}): ${detail.slice(0, 200)}`)
+  }
+  const { prompt_id } = (await submit.json()) as { prompt_id: string }
+
+  // Poll history until the job lands (GPU time varies — be patient).
+  for (let tries = 0; tries < 240; tries++) {
+    if (req.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    await new Promise((r) => setTimeout(r, 1000))
+    const hist = await fetch(`${base}/history/${prompt_id}`, { signal: req.signal })
+    if (!hist.ok) continue
+    const data = (await hist.json()) as Record<
+      string,
+      { outputs?: Record<string, { images?: { filename: string; subfolder: string; type: string }[] }> }
+    >
+    const outputs = data[prompt_id]?.outputs
+    if (!outputs) continue
+    for (const node of Object.values(outputs)) {
+      const img = node.images?.[0]
+      if (img) {
+        const view = await fetch(
+          `${base}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder)}&type=${img.type}`,
+          { signal: req.signal },
+        )
+        if (!view.ok) throw new Error(`ComfyUI /view error (${view.status}).`)
+        const blob = await view.blob()
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = () => reject(new Error('Could not read the image.'))
+          reader.readAsDataURL(blob)
+        })
+      }
+    }
+  }
+  throw new Error('ComfyUI timed out after 4 minutes — check the server console.')
+}
+
+// ---------- entry point ----------
+
+/** Generate an image with the configured local backend. Returns a data URL. */
+export async function generateImage(req: ImageRequest): Promise<string> {
+  const { imageProvider } = useSettings.getState()
+  if (imageProvider === 'off') {
+    throw new Error('Image generation is off — pick a backend in Settings → Image Generation.')
+  }
+  return imageProvider === 'a1111' ? a1111Txt2Img(req) : comfyTxt2Img(req)
+}
+
+/** Decode a data URL into raw bytes (for PNG embedding). */
+export function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return bytes
+}

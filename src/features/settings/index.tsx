@@ -141,6 +141,62 @@ const THEME_TILES: { id: ThemeId; name: string; bg: string; accent: string; text
   { id: 'abyss', name: 'Abyss', bg: '#080c12', accent: '#4fb39c', text: '#dfe7ec' },
 ]
 
+function ImageGenCard() {
+  const { imageProvider, a1111Url, comfyUrl, imageSize, setImageGen } = useSettings()
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="kicker" style={{ marginBottom: 10 }}>Image Generation — your own GPUs</div>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 12, maxWidth: 560 }}>
+        Portraits for exported SillyTavern cards, generated locally. Point TomeForge at
+        Automatic1111 or ComfyUI on your network — nothing leaves your machines.
+      </p>
+      <div className="row wrap" style={{ gap: 10 }}>
+        <Field label="Backend">
+          <select
+            value={imageProvider}
+            onChange={(e) => setImageGen({ imageProvider: e.target.value as 'off' | 'a1111' | 'comfy' })}
+          >
+            <option value="off">Off</option>
+            <option value="a1111">Automatic1111</option>
+            <option value="comfy">ComfyUI</option>
+          </select>
+        </Field>
+        <Field label="Image size">
+          <select value={imageSize} onChange={(e) => setImageGen({ imageSize: e.target.value })}>
+            <option value="512x512">512 × 512</option>
+            <option value="512x768">512 × 768 (card portrait)</option>
+            <option value="768x1024">768 × 1024</option>
+          </select>
+        </Field>
+      </div>
+      {imageProvider === 'a1111' && (
+        <Field
+          label="Automatic1111 URL"
+          hint={'Launch the webui with:  --api --cors-allow-origins "*"  (or list this app\'s origin) — otherwise the browser can\'t call it.'}
+        >
+          <input
+            type="text"
+            value={a1111Url}
+            onChange={(e) => setImageGen({ a1111Url: e.target.value.trim() })}
+          />
+        </Field>
+      )}
+      {imageProvider === 'comfy' && (
+        <Field
+          label="ComfyUI URL"
+          hint={'Launch ComfyUI with:  --listen --enable-cors-header "*"  so a browser on another machine can call it.'}
+        >
+          <input
+            type="text"
+            value={comfyUrl}
+            onChange={(e) => setImageGen({ comfyUrl: e.target.value.trim() })}
+          />
+        </Field>
+      )}
+    </div>
+  )
+}
+
 function AppearanceCard() {
   const { theme, setTheme } = useSettings()
   return (
@@ -183,6 +239,7 @@ export default function SettingsPage() {
         <div className="kicker" style={{ marginBottom: 10 }}>Provider — click to activate</div>
         <ProviderCards />
         <ProviderPanel />
+        <ImageGenCard />
         <AppearanceCard />
 
         <div className="card" style={{ marginTop: 16 }}>

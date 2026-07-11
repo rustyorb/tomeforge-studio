@@ -21,11 +21,18 @@ interface SettingsStore {
   theme: ThemeId
   /** Daily writing goal in words; 0 = goal off */
   dailyGoal: number
+  /** Local image generation backend */
+  imageProvider: 'off' | 'a1111' | 'comfy'
+  a1111Url: string
+  comfyUrl: string
+  /** "widthxheight" for generated images */
+  imageSize: string
   setProvider: (id: string) => void
   updateProvider: (id: string, patch: Partial<ProviderConfig>) => void
   setMaxTokens: (n: number) => void
   setTheme: (t: ThemeId) => void
   setDailyGoal: (n: number) => void
+  setImageGen: (patch: Partial<Pick<SettingsStore, 'imageProvider' | 'a1111Url' | 'comfyUrl' | 'imageSize'>>) => void
 }
 
 function defaultProviders(): Record<string, ProviderConfig> {
@@ -49,6 +56,10 @@ export const useSettings = create<SettingsStore>()(
       maxTokens: 2048,
       theme: 'ember',
       dailyGoal: 0,
+      imageProvider: 'off',
+      a1111Url: 'http://127.0.0.1:7860',
+      comfyUrl: 'http://192.168.0.69:8188',
+      imageSize: '512x768',
       setProvider: (id) => set({ provider: id }),
       updateProvider: (id, patch) =>
         set((s) => ({
@@ -57,6 +68,7 @@ export const useSettings = create<SettingsStore>()(
       setMaxTokens: (n) => set({ maxTokens: n }),
       setTheme: (t) => set({ theme: t }),
       setDailyGoal: (n) => set({ dailyGoal: Math.max(0, Math.floor(n) || 0) }),
+      setImageGen: (patch) => set(patch),
     }),
     {
       name: 'tomeforge-settings',

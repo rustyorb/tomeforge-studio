@@ -1,13 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
-import type { AtlasPin } from '../../types'
+import type { AtlasPin, MapStyle } from '../../types'
 import { uid } from '../../lib/id'
 import { streamMessage } from '../../lib/ai'
 import { looseJson } from '../../lib/looseJson'
 import { downloadBlob } from '../../lib/export/download'
 import { EmptyState, ErrorBanner } from '../../components/ui'
-import { MAP_H, MAP_W, landSpotFor, makeTerrain, renderTerrain } from './terrain'
+import {
+  MAP_H, MAP_W, anySpotFor, landSpotFor, makeTerrain, renderCity, renderFloor, renderTerrain,
+} from './terrain'
 import './atlas.css'
+
+const STYLES: { id: MapStyle; glyph: string; title: string; blurb: string }[] = [
+  { id: 'world', glyph: '🗺', title: 'World & continents', blurb: 'Coastlines, mountains, the whole realm — for epics and expeditions.' },
+  { id: 'city', glyph: '🏙', title: 'Streets & neighborhoods', blurb: 'Blocks, avenues, parks, a river — for the downtowns real stories happen in.' },
+  { id: 'floor', glyph: '🏢', title: 'Building floor plan', blurb: 'Rooms, corridors, doors — blueprint an office, house, or crime scene.' },
+]
+
+const INVENT_PROMPTS: Record<MapStyle, string> = {
+  world:
+    'Invent 6 evocative place names for this world — regions, towns, landmarks fitting the tone. ',
+  city:
+    'Invent 6 named spots for this neighborhood — bars, diners, offices, venues, corners, ' +
+    'buildings with reputations. Real-world texture, no fantasy unless the story has it. ',
+  floor:
+    'Invent 6 rooms or areas for this building fitting the story — offices, departments, ' +
+    'utility rooms, places with secrets. ',
+}
 
 /**
  * The Atlas — a seeded, procedurally-inked map of the tome's world. Codex
@@ -30,13 +49,23 @@ export default function AtlasPage() {
 
   const atlas = project?.atlas ?? null
   const seed = atlas?.seed ?? 0
-  const terrain = useMemo(() => (atlas ? makeTerrain(seed) : null), [atlas !== null, seed])
+  const style: MapStyle = atlas?.style ?? 'world'
+  const terrain = useMemo(
+    () => (atlas && style === 'world' ? makeTerrain(seed) : null),
+    [atlas !== null, seed, style],
+  )
 
-  // Paint terrain whenever the seed changes.
+  // Paint whenever the seed or style changes.
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d')
-    if (ctx && terrain) renderTerrain(ctx, terrain)
-  }, [terrain])
+    if (!ctx || !atlas) return
+    if (style === 'world' && terrain) renderTerrain(ctx, terrain)
+    else if (style === 'city') renderCity(ctx, seed)
+    else if (style === 'floor') renderFloor(ctx, seed)
+  }, [terrain, atlas !== null, seed, style])
+
+  const spotFor = (name: string, salt: number) =>
+    style === 'world' && terrain ? landSpotFor(name, terrain, salt) : anySpotFor(name, salt)
 
   // Pin dragging on the overlay.
   useEffect(() => {
@@ -82,21 +111,24 @@ export default function AtlasPage() {
     )
   }
 
-  const forgeWorld = () => {
+  const forgeWorld = (nextStyle?: MapStyle) => {
     updateProject(project.id, (d) => {
-      d.atlas = { seed: Math.floor(Math.random() * 2 ** 31), pins: d.atlas?.pins ?? [] }
+      d.atlas = {
+        seed: Math.floor(Math.random() * 2 ** 31),
+        pins: d.atlas?.pins ?? [],
+        style: nextStyle ?? d.atlas?.style ?? 'world',
+      }
     })
   }
 
   const pinCodexLocations = () => {
-    if (!terrain) return
     updateProject(project.id, (d) => {
       if (!d.atlas) return
       const existing = new Set(d.atlas.pins.map((p) => p.name.toLowerCase()))
       let salt = 0
       for (const entry of d.codex.filter((e) => e.type === 'location')) {
         if (existing.has(entry.name.toLowerCase())) continue
-        const spot = landSpotFor(entry.name, terrain, salt++)
+        const spot = spotFor(entry.name, salt++)
         d.atlas.pins.push({ id: uid(), name: entry.name, x: spot.x, y: spot.y })
         existing.add(entry.name.toLowerCase())
       }
@@ -104,7 +136,7 @@ export default function AtlasPage() {
   }
 
   const inventPlaces = async () => {
-    if (!terrain || busy) return
+    if (busy) return
     setBusy(true)
     setError(null)
     try {
@@ -112,7 +144,8 @@ export default function AtlasPage() {
       const full = await streamMessage({
         system:
           'You are a structured-data generation engine. Respond with ONLY a fenced ```json array.\n\nTASK:\n' +
-          `Invent 6 evocative place names for the world of "${project.name}" (${project.genre || 'fiction'}: ${project.logline}). ` +
+          INVENT_PROMPTS[style] +
+          `The story: "${project.name}" (${project.genre || 'fiction'}: ${project.logline}). ` +
           `Fit the tone; avoid these existing places: ${known}. ` +
           'Each element: {"name": "Place Name", "note": "one-line description"}.',
         messages: [{ role: 'user', content: 'Return the JSON array now.' }],
@@ -131,7 +164,7 @@ export default function AtlasPage() {
             ? ((item as Record<string, unknown>).name as string).trim()
             : ''
           if (!name || existing.has(name.toLowerCase())) continue
-          const spot = landSpotFor(name, terrain, salt++)
+          const spot = spotFor(name, salt++)
           d.atlas.pins.push({ id: uid(), name, x: spot.x, y: spot.y })
           existing.add(name.toLowerCase())
           const note = (item as Record<string, unknown>).note
@@ -158,12 +191,14 @@ export default function AtlasPage() {
   }
 
   const exportPng = async () => {
-    if (!terrain) return
+    if (!atlas) return
     const canvas = document.createElement('canvas')
     canvas.width = MAP_W
     canvas.height = MAP_H
     const ctx = canvas.getContext('2d')!
-    renderTerrain(ctx, terrain)
+    if (style === 'world' && terrain) renderTerrain(ctx, terrain)
+    else if (style === 'city') renderCity(ctx, seed)
+    else renderFloor(ctx, seed)
     // Pins + labels
     for (const pin of project.atlas?.pins ?? []) {
       const px = pin.x * MAP_W
@@ -235,21 +270,44 @@ export default function AtlasPage() {
       </header>
 
       {!atlas ? (
-        <EmptyState glyph="🗺" title="Uncharted">
-          <p style={{ marginBottom: 14 }}>No map has been drawn for this world yet.</p>
-          <button className="btn primary" onClick={forgeWorld}>🗺 Chart the world</button>
-        </EmptyState>
+        <div className="rise-1">
+          <div className="kicker" style={{ marginBottom: 10 }}>Uncharted — choose a scale</div>
+          <div className="grid-3">
+            {STYLES.map((s) => (
+              <div key={s.id} className="card interactive" onClick={() => forgeWorld(s.id)}>
+                <div style={{ fontSize: 30, marginBottom: 8 }}>{s.glyph}</div>
+                <h3 style={{ marginBottom: 6 }}>{s.title}</h3>
+                <p className="muted" style={{ fontSize: 13 }}>{s.blurb}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : (
         <>
           <div className="row wrap rise-1" style={{ marginBottom: 12 }}>
-            <button
-              className="btn small"
-              title="Redraw the terrain with a new seed (pins stay put)"
-              onClick={() => {
-                if (confirm('Redraw the terrain? Pins keep their positions on the new land.')) forgeWorld()
+            <select
+              value={style}
+              title="Map scale — switching redraws (pins keep their positions)"
+              style={{ width: 'auto' }}
+              onChange={(e) => {
+                const next = e.target.value as MapStyle
+                if (confirm('Switch map scale? The chart redraws; pins keep their positions.')) {
+                  forgeWorld(next)
+                }
               }}
             >
-              🌍 New terrain
+              {STYLES.map((s) => (
+                <option key={s.id} value={s.id}>{s.glyph} {s.title}</option>
+              ))}
+            </select>
+            <button
+              className="btn small"
+              title="Redraw with a new seed (pins stay put)"
+              onClick={() => {
+                if (confirm('Redraw the chart? Pins keep their positions.')) forgeWorld()
+              }}
+            >
+              🌍 Redraw
             </button>
             <button className="btn small" onClick={pinCodexLocations} title="Place every location-type codex entry on the map">
               📍 Pin codex locations

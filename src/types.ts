@@ -255,6 +255,9 @@ export interface Branch {
   note: string
 }
 
+/** Map scale: fantasy continents, city streets, or a building interior */
+export type MapStyle = 'world' | 'city' | 'floor'
+
 export interface AtlasPin {
   id: ID
   name: string
@@ -296,7 +299,7 @@ export interface Project {
   /** Recently deleted scenes, restorable (capped) */
   trashedScenes?: TrashedScene[]
   /** The Atlas: seeded terrain + named pins (0-1 normalized coordinates) */
-  atlas?: { seed: number; pins: AtlasPin[] }
+  atlas?: { seed: number; pins: AtlasPin[]; style?: MapStyle }
   branches: Branch[]
   /** Relationship graph woven by AI, cached until regenerated */
   castWeb?: CastWeb | null

@@ -11,6 +11,18 @@ export interface ImageRequest {
   signal?: AbortSignal
 }
 
+/**
+ * Normalize a backend base URL: proxy paths ('/comfy') pass through; anything
+ * else without a scheme gets http:// prepended — otherwise "127.0.0.1:8188"
+ * is fetched as a RELATIVE path and the app answers with its own HTML.
+ */
+export function normalizeBase(url: string): string {
+  const trimmed = url.trim().replace(/\/$/, '')
+  if (trimmed.startsWith('/')) return trimmed
+  if (!/^https?:\/\//i.test(trimmed)) return `http://${trimmed}`
+  return trimmed
+}
+
 function parseSize(size: string): { width: number; height: number } {
   const m = size.match(/^(\d+)x(\d+)$/)
   return m ? { width: Number(m[1]), height: Number(m[2]) } : { width: 512, height: 768 }
@@ -26,7 +38,7 @@ async function a1111Txt2Img(req: ImageRequest): Promise<string> {
   const { width, height } = parseSize(imageSize)
   let res: Response
   try {
-    res = await fetch(`${a1111Url.replace(/\/$/, '')}/sdapi/v1/txt2img`, {
+    res = await fetch(`${normalizeBase(a1111Url)}/sdapi/v1/txt2img`, {
       method: 'POST',
       signal: req.signal,
       headers: { 'content-type': 'application/json' },
@@ -164,7 +176,7 @@ function injectWorkflow(
 
 async function comfyTxt2Img(req: ImageRequest): Promise<string> {
   const { comfyUrl, imageSize, comfyWorkflow: customWorkflow } = useSettings.getState()
-  const base = comfyUrl.replace(/\/$/, '')
+  const base = normalizeBase(comfyUrl)
   const { width, height } = parseSize(imageSize)
 
   // Custom workflow path: the user's own graph, prompts injected.

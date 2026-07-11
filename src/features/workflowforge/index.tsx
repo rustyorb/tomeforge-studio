@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useSettings } from '../../store/useSettings'
 import { streamMessage } from '../../lib/ai'
-import { comfySubmit } from '../../lib/imageGen'
+import { comfySubmit, normalizeBase } from '../../lib/imageGen'
 import { looseJson } from '../../lib/looseJson'
 import { downloadText } from '../../lib/export/download'
 import { ErrorBanner, Field } from '../../components/ui'
@@ -74,7 +74,7 @@ export default function WorkflowForgePage() {
       // 1. Ground in the live server's catalog.
       setStage('catalog')
       if (!catalogRef.current) {
-        catalogRef.current = await fetchCatalog(comfyUrl)
+        catalogRef.current = await fetchCatalog(normalizeBase(comfyUrl))
       }
       const catalog = catalogRef.current
       let digest = digestCatalog(catalog)
@@ -143,7 +143,7 @@ export default function WorkflowForgePage() {
     setStage('running')
     const t0 = Date.now()
     try {
-      const url = await comfySubmit(comfyUrl.replace(/\/$/, ''), graph, controller.signal)
+      const url = await comfySubmit(normalizeBase(comfyUrl), graph, controller.signal)
       setResultImg(url)
       setRunSecs(Math.round((Date.now() - t0) / 1000))
     } catch (e) {

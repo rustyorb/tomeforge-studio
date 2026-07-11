@@ -26,9 +26,9 @@ export async function fetchCatalog(base: string): Promise<Catalog> {
   if (!res.ok) throw new Error(`ComfyUI /object_info error (${res.status}).`)
   if ((res.headers.get('content-type') ?? '').includes('text/html')) {
     throw new Error(
-      `"${base}" answered with a web page, not ComfyUI. If you're using the '/comfy' proxy ` +
-        'path, the dev server needs a restart (stop.bat then start.bat) to activate it — or set ' +
-        'an absolute URL like http://127.0.0.1:8188 in Settings → Image Generation.',
+      `"${base}" answered with the app's own page instead of ComfyUI. Either the '/comfy' proxy ` +
+        "isn't active yet (restart the dev server: stop.bat then start.bat), or the URL needs a " +
+        'full scheme — use http://127.0.0.1:8188 in Settings → Image Generation.',
     )
   }
   return (await res.json()) as Catalog

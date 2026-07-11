@@ -9,6 +9,7 @@ import SceneTree from './SceneTree'
 import FindReplace from './FindReplace'
 import PromptPeek from './PromptPeek'
 import Corkboard from './Corkboard'
+import ReadingMode from './ReadingMode'
 import Toolbar from './Toolbar'
 import ResultPanels from './ResultPanels'
 import RewritePanel from './RewritePanel'
@@ -50,6 +51,7 @@ export default function ManuscriptPage() {
   const [findOpen, setFindOpen] = useState(false)
   const [peekOpen, setPeekOpen] = useState(false)
   const [view, setView] = useState<'editor' | 'cork'>('editor')
+  const [reading, setReading] = useState(false)
   const [replaceError, setReplaceError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [focusMode, setFocusMode] = useState(false)
@@ -266,6 +268,13 @@ export default function ManuscriptPage() {
           <span className="row">
             <button
               className="btn ghost small"
+              title="Reading Mode — the manuscript as a book"
+              onClick={() => setReading(true)}
+            >
+              📖 Read
+            </button>
+            <button
+              className="btn ghost small"
               title={view === 'editor' ? 'Corkboard — every scene as a pinned card' : 'Back to the editor'}
               onClick={() => setView((v) => (v === 'editor' ? 'cork' : 'editor'))}
             >
@@ -280,6 +289,8 @@ export default function ManuscriptPage() {
       </header>
 
       {findOpen && <FindReplace project={project} onClose={() => setFindOpen(false)} />}
+
+      {reading && <ReadingMode project={project} onClose={() => setReading(false)} />}
 
       {view === 'cork' && (
         <Corkboard

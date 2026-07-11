@@ -45,9 +45,28 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { projects, activeProjectId, setActiveProject, createProject, deleteProject } = useStore()
   const [creating, setCreating] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [genre, setGenre] = useState('')
   const [logline, setLogline] = useState('')
+
+  const editingProject = projects.find((p) => p.id === editingId) ?? null
+  const startEdit = (e: React.MouseEvent, p: Project) => {
+    e.stopPropagation()
+    setName(p.name)
+    setGenre(p.genre)
+    setLogline(p.logline)
+    setEditingId(p.id)
+  }
+  const saveEdit = () => {
+    if (!editingProject || !name.trim()) return
+    useStore.getState().updateProject(editingProject.id, (d) => {
+      d.name = name.trim()
+      d.genre = genre.trim()
+      d.logline = logline.trim()
+    })
+    setEditingId(null)
+  }
 
   const daily = useMemo(() => combinedDaily(projects), [projects])
   const totalWords = projects.reduce((s, p) => s + projectTotalWords(p), 0)
@@ -110,7 +129,15 @@ export default function Dashboard() {
       </div>
 
       <div className="row" style={{ marginBottom: 20 }}>
-        <button className="btn primary" onClick={() => setCreating(true)}>
+        <button
+          className="btn primary"
+          onClick={() => {
+            setName('')
+            setGenre('')
+            setLogline('')
+            setCreating(true)
+          }}
+        >
           ⊕ Forge New Tome
         </button>
       </div>
@@ -151,6 +178,13 @@ export default function Dashboard() {
                   </button>
                   <button
                     className="btn ghost small"
+                    title="Edit title, genre, and logline"
+                    onClick={(e) => startEdit(e, p)}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="btn ghost small"
                     title="Duplicate this tome — a full copy for experiments"
                     onClick={(e) => duplicateTome(e, p)}
                   >
@@ -173,6 +207,25 @@ export default function Dashboard() {
           )
         })}
       </div>
+
+      {editingProject && (
+        <Modal title={`Edit "${editingProject.name}"`} onClose={() => setEditingId(null)}>
+          <Field label="Title">
+            <input type="text" value={name} autoFocus onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label="Genre">
+            <input type="text" value={genre} onChange={(e) => setGenre(e.target.value)} />
+          </Field>
+          <Field label="Logline">
+            <textarea value={logline} onChange={(e) => setLogline(e.target.value)} />
+          </Field>
+          <div className="row" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn primary" disabled={!name.trim()} onClick={saveEdit}>
+              Save
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {creating && (
         <Modal title="Forge New Tome" onClose={() => setCreating(false)}>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useActiveProject, useStore } from '../../store/useStore'
 import { EmptyState } from '../../components/ui'
 import { ProfileEditor } from './ProfileEditor'
+import StyleMatch from './StyleMatch'
 
 export default function VoiceprintPage() {
   const styleProfiles = useStore((s) => s.styleProfiles)
@@ -10,6 +11,7 @@ export default function VoiceprintPage() {
   const project = useActiveProject()
 
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [matchOpen, setMatchOpen] = useState(false)
   const editing = styleProfiles.find((p) => p.id === editingId) ?? null
 
   const newProfile = () => {
@@ -32,10 +34,21 @@ export default function VoiceprintPage() {
         <button className="btn primary" onClick={newProfile}>
           ⊕ New Profile
         </button>
+        <button
+          className="btn"
+          title="Paste a prose sample — the AI reverse-engineers it into a full voiceprint"
+          onClick={() => setMatchOpen(true)}
+        >
+          🧬 Match a voice
+        </button>
         {project && (
           <span className="mono faint">Assigning for: {project.name}</span>
         )}
       </div>
+
+      {matchOpen && (
+        <StyleMatch onClose={() => setMatchOpen(false)} onCreated={(id) => setEditingId(id)} />
+      )}
 
       {styleProfiles.length === 0 ? (
         <EmptyState glyph="❦" title="No voiceprints yet">

@@ -3,33 +3,8 @@ import { useStore } from '../../store/useStore'
 import type { STCardStored, STEntry } from '../../types'
 import { uid } from '../../lib/id'
 import { streamMessage } from '../../lib/ai'
+import { looseJson } from '../../lib/looseJson'
 import { ErrorBanner, Field } from '../../components/ui'
-
-/** Loose JSON reader (fenced block, raw, or bracket scan). */
-function looseJson(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  for (const candidate of [fenced?.[1], text]) {
-    if (!candidate) continue
-    const trimmed = candidate.trim()
-    try {
-      return JSON.parse(trimmed)
-    } catch {
-      /* try bracket scan */
-    }
-    const start = trimmed.search(/[[{]/)
-    if (start >= 0) {
-      const end = trimmed.lastIndexOf(trimmed[start] === '[' ? ']' : '}')
-      if (end > start) {
-        try {
-          return JSON.parse(trimmed.slice(start, end + 1))
-        } catch {
-          /* keep trying */
-        }
-      }
-    }
-  }
-  return null
-}
 
 const str = (v: unknown, cap = 4000): string => (typeof v === 'string' ? v.slice(0, cap) : '')
 const strArr = (v: unknown): string[] =>

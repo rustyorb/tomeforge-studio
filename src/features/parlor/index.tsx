@@ -4,6 +4,9 @@ import type { CharacterCard, STCardStored } from '../../types'
 import { streamMessage } from '../../lib/ai'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
 import { EmptyState, ErrorBanner } from '../../components/ui'
+import { applyMacros } from '../../lib/stMacros'
+import SalonMode from './SalonMode'
+import { chatToProseScene } from './convert'
 import './parlor.css'
 
 interface Turn {
@@ -12,11 +15,12 @@ interface Turn {
 }
 
 function guestSheet(g: STCardStored): string {
+  const m = (t: string) => applyMacros(t, g.name)
   const bits = [
-    g.description && `About them: ${g.description}`,
-    g.personality && `Personality: ${g.personality}`,
-    g.scenario && `Their usual scenario: ${g.scenario}`,
-    g.mesExample && `How they speak (examples): ${g.mesExample.slice(0, 600)}`,
+    g.description && `About them: ${m(g.description)}`,
+    g.personality && `Personality: ${m(g.personality)}`,
+    g.scenario && `Their usual scenario: ${m(g.scenario)}`,
+    g.mesExample && `How they speak (examples): ${m(g.mesExample.slice(0, 600))}`,
   ].filter(Boolean)
   return `GUEST SHEET — ${g.name}\n${bits.join('\n')}`
 }
@@ -42,6 +46,9 @@ export default function ParlorPage() {
   const stLibrary = useStore((s) => s.stLibrary ?? [])
   const guests = stLibrary.filter((x): x is STCardStored => x.kind === 'card')
 
+  const [mode, setMode] = useState<'solo' | 'salon'>('solo')
+  const [converting, setConverting] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const [charId, setCharId] = useState<string | null>(null)
   const [guestId, setGuestId] = useState<string | null>(null)
   const [turns, setTurns] = useState<Turn[]>([])
@@ -77,9 +84,18 @@ export default function ParlorPage() {
     abortRef.current?.abort()
     setCharId(kind === 'cast' ? id : null)
     setGuestId(kind === 'guest' ? id : null)
-    setTurns([])
     setStream('')
     setError(null)
+    // Guests arrive in character: open with their first message (or a random
+    // alternate greeting), exactly as the card's author wrote it.
+    const g = kind === 'guest' ? guests.find((x) => x.id === id) : null
+    const greetings = g ? [g.firstMes, ...(g.alternateGreetings ?? [])].filter((x): x is string => !!x?.trim()) : []
+    if (g && greetings.length) {
+      const pickGreeting = greetings[Math.floor(Math.random() * greetings.length)]
+      setTurns([{ role: 'assistant', text: applyMacros(pickGreeting, g.name) }])
+    } else {
+      setTurns([])
+    }
   }
 
   const send = async () => {
@@ -156,7 +172,18 @@ export default function ParlorPage() {
         </p>
       </header>
 
-      {nobodyToSeat ? (
+      <div className="tabs" style={{ marginBottom: 18 }}>
+        <button className={`tab ${mode === 'solo' ? 'active' : ''}`} onClick={() => setMode('solo')}>
+          ❝ One-on-one
+        </button>
+        <button className={`tab ${mode === 'salon' ? 'active' : ''}`} onClick={() => setMode('salon')}>
+          ⚭ The Salon (character × character)
+        </button>
+      </div>
+
+      {mode === 'salon' ? (
+        <SalonMode project={project} styleProfile={styleProfile} guests={guests} />
+      ) : nobodyToSeat ? (
         <EmptyState glyph="☙" title="The parlor is empty">
           Add characters to the Cast Ledger (Story Brain → Cast Ledger) or import some into the
           SillyTavern library, and they'll take a seat here.
@@ -272,9 +299,31 @@ export default function ParlorPage() {
                   >
                     Clear conversation
                   </button>
-                  <button className="btn small" disabled={!turns.length} onClick={saveTranscript}>
-                    ⇲ Save transcript to Project Notes
-                  </button>
+                  <span className="row">
+                    {notice && <span className="tag green">✓ {notice}</span>}
+                    <button className="btn small" disabled={!turns.length} onClick={saveTranscript}>
+                      ⇲ Save to Notes
+                    </button>
+                    <button
+                      className="btn small"
+                      disabled={!turns.length || busy || converting}
+                      title="Rewrite this conversation as a prose scene in a new chapter"
+                      onClick={() => {
+                        if (!character && !guest) return
+                        setConverting(true)
+                        setNotice(null)
+                        const transcript = turns
+                          .map((t) => `${t.role === 'user' ? 'The author' : speaker!.name}: ${t.text}`)
+                          .join('\n\n')
+                        chatToProseScene(project, styleProfile, transcript, 'From the Parlor')
+                          .then((title) => setNotice(`Scene written — "${title}"`))
+                          .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+                          .finally(() => setConverting(false))
+                      }}
+                    >
+                      {converting ? (<><span className="spinner" /> Writing…</>) : '✒ To prose scene'}
+                    </button>
+                  </span>
                 </div>
               </>
             )}

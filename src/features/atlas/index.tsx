@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
 import type { AtlasPin, MapStyle } from '../../types'
 import { uid } from '../../lib/id'
@@ -37,6 +38,7 @@ export default function AtlasPage() {
   const project = useActiveProject()
   const styleProfile = useProjectStyle(project)
   const updateProject = useStore((s) => s.updateProject)
+  const navigate = useNavigate()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -376,16 +378,43 @@ export default function AtlasPage() {
                     </button>
                   </div>
                   {selectedEntry ? (
-                    <p className="muted" style={{ fontSize: 13.5, marginTop: 8 }}>
-                      {selectedEntry.content.slice(0, 600)}
-                    </p>
+                    <div style={{ marginTop: 10 }}>
+                      <div className="kicker" style={{ marginBottom: 5 }}>Lore (lives in the Codex)</div>
+                      <textarea
+                        rows={7}
+                        value={selectedEntry.content}
+                        placeholder={`What is ${selectedPin.name}? Whatever you write here is canon — the co-writer defends it.`}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          updateProject(project.id, (d) => {
+                            const entry = d.codex.find((x) => x.id === selectedEntry.id)
+                            if (entry) {
+                              entry.content = v
+                              entry.updatedAt = Date.now()
+                            }
+                          })
+                        }}
+                      />
+                      <button
+                        className="btn ghost small"
+                        style={{ marginTop: 8 }}
+                        title="Open this entry in Story Brain → Codex (aliases, type, always-include live there)"
+                        onClick={() => {
+                          sessionStorage.setItem('tf-open-codex', selectedEntry.id)
+                          window.dispatchEvent(new CustomEvent('tf-open-codex', { detail: selectedEntry.id }))
+                          navigate('/brain')
+                        }}
+                      >
+                        ⁂ Open in Story Brain →
+                      </button>
+                    </div>
                   ) : (
                     <div style={{ marginTop: 10 }}>
                       <p className="faint" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                        Not in the Codex yet.
+                        No lore yet — give it some and it becomes canon.
                       </p>
                       <button
-                        className="btn small"
+                        className="btn small primary"
                         onClick={() =>
                           updateProject(project.id, (d) => {
                             d.codex.push({
@@ -400,7 +429,7 @@ export default function AtlasPage() {
                           })
                         }
                       >
-                        ⊕ Add to Codex
+                        ⊕ Write its lore
                       </button>
                     </div>
                   )}

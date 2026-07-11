@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../../store/useStore'
 import type { CodexEntry, CodexType, Project, StyleProfile } from '../../types'
 import { CODEX_TYPES } from '../../types'
@@ -13,6 +13,23 @@ export default function CodexTab(props: { project: Project; styleProfile: StyleP
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CodexType>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Deep-link contract: 'tf-open-codex' (sessionStorage on mount, window
+  // event while mounted) selects a specific entry — used by the Atlas pin
+  // panel and the command palette.
+  useEffect(() => {
+    const stored = sessionStorage.getItem('tf-open-codex')
+    if (stored) {
+      sessionStorage.removeItem('tf-open-codex')
+      setSelectedId(stored)
+    }
+    const onEvent = (e: Event) => {
+      sessionStorage.removeItem('tf-open-codex')
+      setSelectedId((e as CustomEvent<string>).detail)
+    }
+    window.addEventListener('tf-open-codex', onEvent)
+    return () => window.removeEventListener('tf-open-codex', onEvent)
+  }, [])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()

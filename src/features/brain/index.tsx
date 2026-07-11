@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useActiveProject, useProjectStyle } from '../../store/useStore'
 import { EmptyState, Tabs } from '../../components/ui'
 import ContinuityCoreTab from './ContinuityCoreTab'
@@ -24,6 +24,15 @@ export default function BrainPage() {
   const project = useActiveProject()
   const styleProfile = useProjectStyle(project)
   const [tab, setTab] = useState('core')
+
+  // Deep-link: a pending 'tf-open-codex' target means land on the Codex tab.
+  // The key itself is consumed by CodexTab (which selects the entry).
+  useEffect(() => {
+    if (sessionStorage.getItem('tf-open-codex')) setTab('codex')
+    const onEvent = () => setTab('codex')
+    window.addEventListener('tf-open-codex', onEvent)
+    return () => window.removeEventListener('tf-open-codex', onEvent)
+  }, [])
 
   if (!project) {
     return (

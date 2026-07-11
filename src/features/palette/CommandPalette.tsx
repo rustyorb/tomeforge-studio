@@ -206,6 +206,8 @@ export default function CommandPalette() {
             frag: fragmentAround(entry.content, tokens),
             run: () => {
               setActiveProject(project.id)
+              sessionStorage.setItem('tf-open-codex', entry.id)
+              window.dispatchEvent(new CustomEvent('tf-open-codex', { detail: entry.id }))
               navigate('/brain')
               setOpen(false)
             },

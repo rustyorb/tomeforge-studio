@@ -219,12 +219,38 @@ async function comfyTxt2Img(req: ImageRequest): Promise<string> {
   )
 }
 
-/** Submit a workflow graph, poll history, and return the image as a data URL. */
+export interface ComfyRunResult {
+  /** First output image as a data URL, if the workflow produced one */
+  image: string | null
+  /** Any text outputs (ShowText-style nodes) */
+  texts: string[]
+}
+
+/** Submit a workflow graph, poll history, and return the image as a data URL.
+ *  Throws if the workflow produced no image — use comfySubmitFull for
+ *  workflows whose product may be text. */
 export async function comfySubmit(
   base: string,
   graph: unknown,
   signal?: AbortSignal,
 ): Promise<string> {
+  const result = await comfySubmitFull(base, graph, signal)
+  if (!result.image) {
+    throw new Error(
+      result.texts.length
+        ? 'The workflow produced text, not an image.'
+        : 'The workflow finished but produced no image.',
+    )
+  }
+  return result.image
+}
+
+/** Submit a workflow graph and return whatever it produced: image, text, or both. */
+export async function comfySubmitFull(
+  base: string,
+  graph: unknown,
+  signal?: AbortSignal,
+): Promise<ComfyRunResult> {
   const clientId = Math.random().toString(36).slice(2)
   let submit: Response
   try {
@@ -254,8 +280,19 @@ export async function comfySubmit(
     const data = (await hist.json()) as Record<
       string,
       {
-        outputs?: Record<string, { images?: { filename: string; subfolder: string; type: string }[] }>
-        status?: { status_str?: string; messages?: [string, { node_type?: string; exception_message?: string }][] }
+        outputs?: Record<
+          string,
+          {
+            images?: { filename: string; subfolder: string; type: string }[]
+            text?: unknown
+            string?: unknown
+          }
+        >
+        status?: {
+          status_str?: string
+          completed?: boolean
+          messages?: [string, { node_type?: string; exception_message?: string }][]
+        }
       }
     >
     const entry = data[prompt_id]
@@ -269,16 +306,28 @@ export async function comfySubmit(
     }
     const outputs = entry.outputs
     if (!outputs) continue
+
+    // Job landed: collect whatever it produced — image, text, or both.
+    let image: string | null = null
+    const texts: string[] = []
     for (const node of Object.values(outputs)) {
+      for (const key of ['text', 'string'] as const) {
+        const t = node[key]
+        if (Array.isArray(t)) {
+          for (const s of t) if (typeof s === 'string' && s.trim()) texts.push(s)
+        } else if (typeof t === 'string' && t.trim()) {
+          texts.push(t)
+        }
+      }
       const img = node.images?.[0]
-      if (img) {
+      if (img && !image) {
         const view = await fetch(
           `${base}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder)}&type=${img.type}`,
           { signal },
         )
         if (!view.ok) throw new Error(`ComfyUI /view error (${view.status}).`)
         const blob = await view.blob()
-        return await new Promise<string>((resolve, reject) => {
+        image = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onload = () => resolve(reader.result as string)
           reader.onerror = () => reject(new Error('Could not read the image.'))
@@ -286,6 +335,10 @@ export async function comfySubmit(
         })
       }
     }
+    if (image || texts.length) return { image, texts }
+    // Outputs exist but nothing consumable yet (e.g. preview-only nodes still
+    // streaming) — if the job reports completed, stop with what we have.
+    if (entry.status?.completed) return { image: null, texts: [] }
   }
   throw new Error('ComfyUI timed out after 4 minutes — check the server console.')
 }

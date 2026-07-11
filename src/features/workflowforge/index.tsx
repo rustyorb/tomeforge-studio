@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
 import { useSettings } from '../../store/useSettings'
 import { streamMessage } from '../../lib/ai'
-import { comfySubmit, normalizeBase } from '../../lib/imageGen'
+import { comfySubmitFull, normalizeBase } from '../../lib/imageGen'
 import { looseJson } from '../../lib/looseJson'
 import { downloadText } from '../../lib/export/download'
-import { ErrorBanner, Field } from '../../components/ui'
+import { CopyButton, ErrorBanner, Field } from '../../components/ui'
 import {
   CORE_NODES, digestCatalog, exoticNodesUsed, fetchCatalog, sampleExotics, schemasFor,
   searchNodes, validateGraph,
@@ -26,6 +26,8 @@ RULES:
 - Keep it as simple as the request allows; do not invent nodes for features not requested.
 - If TASK-RELEVANT NODES are provided, they exist on this server and are usually the right
   tool — prefer them over approximating with core nodes.
+- Any final STRING result (captions, prompts, tags) must be fed into a text-display node
+  from the catalog (e.g. "ShowText|pysssss") so the output is visible and retrievable.
 Respond with ONLY a fenced \`\`\`json block containing the workflow object — no commentary.`
 
 type Stage = 'idle' | 'catalog' | 'generating' | 'repairing' | 'running'
@@ -41,6 +43,7 @@ export default function WorkflowForgePage() {
   const [issues, setIssues] = useState<ValidationIssue[]>([])
   const [repaired, setRepaired] = useState(false)
   const [resultImg, setResultImg] = useState<string | null>(null)
+  const [resultTexts, setResultTexts] = useState<string[]>([])
   const [inputImage, setInputImage] = useState<string | null>(null)
   const [runSecs, setRunSecs] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -184,14 +187,19 @@ export default function WorkflowForgePage() {
     if (!graph || busy) return
     setError(null)
     setResultImg(null)
+    setResultTexts([])
     setNotice(null)
     const controller = new AbortController()
     abortRef.current = controller
     setStage('running')
     const t0 = Date.now()
     try {
-      const url = await comfySubmit(normalizeBase(comfyUrl), graph, controller.signal)
-      setResultImg(url)
+      const result = await comfySubmitFull(normalizeBase(comfyUrl), graph, controller.signal)
+      setResultImg(result.image)
+      setResultTexts(result.texts)
+      if (!result.image && !result.texts.length) {
+        setNotice('The workflow ran, but produced nothing this app can display (check ComfyUI).')
+      }
       setRunSecs(Math.round((Date.now() - t0) / 1000))
     } catch (e) {
       if (!(e instanceof Error && e.name === 'AbortError')) {
@@ -353,16 +361,40 @@ export default function WorkflowForgePage() {
 
           {notice && <div className="tag green" style={{ marginTop: 10 }}>✓ {notice}</div>}
 
-          {resultImg && (
+          {(resultImg || resultTexts.length > 0) && (
             <div style={{ marginTop: 14 }}>
               <div className="kicker" style={{ marginBottom: 8 }}>
                 Live result{runSecs !== null ? ` — ${runSecs}s on your GPU` : ''}
               </div>
-              <img
-                src={resultImg}
-                alt="Workflow result"
-                style={{ maxWidth: '100%', maxHeight: 480, borderRadius: 8, border: '1px solid var(--line)' }}
-              />
+              {resultTexts.map((t, i) => (
+                <div
+                  key={i}
+                  className="prose-block"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 12.5,
+                    background: 'var(--ink-0)',
+                    border: '1px solid var(--line-soft)',
+                    borderRadius: 6,
+                    padding: 12,
+                    marginBottom: 10,
+                  }}
+                >
+                  {t}
+                </div>
+              ))}
+              {resultTexts.length > 0 && (
+                <div className="row" style={{ marginBottom: 10 }}>
+                  <CopyButton text={resultTexts.join('\n\n')} label="Copy text result" />
+                </div>
+              )}
+              {resultImg && (
+                <img
+                  src={resultImg}
+                  alt="Workflow result"
+                  style={{ maxWidth: '100%', maxHeight: 480, borderRadius: 8, border: '1px solid var(--line)' }}
+                />
+              )}
             </div>
           )}
         </div>

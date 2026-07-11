@@ -7,13 +7,14 @@ import { runGmTurn } from './gm'
 import type { PlayerInput } from './gm'
 import { QUEST_MODES } from './modes'
 import { StateSidebar } from './StateSidebar'
+import { StateEditor } from './StateEditor'
 import { ConvertProseModal } from './ConvertProseModal'
 
 const COMMANDS: QuestCommand[] = [
   'do', 'say', 'think', 'inspect', 'use', 'travel', 'wait', 'remember',
 ]
 
-type PanelKind = 'inventory' | 'quests' | 'convert' | 'branches' | null
+type PanelKind = 'inventory' | 'quests' | 'convert' | 'branches' | 'editState' | null
 
 /** Deep clone for freezing/restoring quest states across branches. */
 function cloneQuest(q: QuestState): QuestState {
@@ -213,6 +214,13 @@ export function PlayView(props: {
             <button className="btn ghost small" onClick={() => setPanel('quests')}>
               Quest Log
             </button>
+            <button
+              className="btn ghost small"
+              title="Manually correct the tracked world state"
+              onClick={() => setPanel('editState')}
+            >
+              ✎ State
+            </button>
           </div>
 
           <div className="sq-command-bar">
@@ -312,6 +320,18 @@ export function PlayView(props: {
             </div>
           )}
         </Modal>
+      )}
+
+      {panel === 'editState' && (
+        <StateEditor
+          state={quest.state}
+          onClose={() => setPanel(null)}
+          onSave={(next) =>
+            updateProject(project.id, (draft) => {
+              if (draft.quest) draft.quest.state = next
+            })
+          }
+        />
       )}
 
       {panel === 'inventory' && (

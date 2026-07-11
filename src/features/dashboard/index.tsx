@@ -35,6 +35,42 @@ function coverStyle(name: string): React.CSSProperties {
   }
 }
 
+const BACKUP_NAG_DAYS = 7
+
+/** Gentle reminder when there's real work and no recent backup. */
+function BackupNag(props: { totalWords: number }) {
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem('tf-backup-nag-dismissed') === '1',
+  )
+  const navigate = useNavigate()
+  if (dismissed || props.totalWords < 2000) return null
+  const last = Number(localStorage.getItem('tomeforge-last-backup') ?? 0)
+  const age = (Date.now() - last) / 86_400_000
+  if (last && age < BACKUP_NAG_DAYS) return null
+  return (
+    <div className="card row between wrap" style={{ marginBottom: 18, borderColor: 'var(--brass)' }}>
+      <span style={{ fontSize: 13.5 }}>
+        🕯️ {props.totalWords.toLocaleString()} words live only in this browser
+        {last ? ` — last backup ${Math.floor(age)} days ago.` : ' — never backed up.'}
+      </span>
+      <span className="row">
+        <button className="btn small primary" onClick={() => navigate('/export')}>
+          Back up now
+        </button>
+        <button
+          className="btn ghost small"
+          onClick={() => {
+            sessionStorage.setItem('tf-backup-nag-dismissed', '1')
+            setDismissed(true)
+          }}
+        >
+          Later
+        </button>
+      </span>
+    </div>
+  )
+}
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (!parts.length) return '?'
@@ -112,6 +148,8 @@ export default function Dashboard() {
           the workshop, or forge a new story from a single spark.
         </p>
       </header>
+
+      <BackupNag totalWords={totalWords} />
 
       <div className="db-stats rise">
         <div className="db-stat">

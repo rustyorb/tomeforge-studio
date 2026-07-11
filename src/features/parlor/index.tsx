@@ -205,11 +205,22 @@ export default function ParlorPage() {
               <>
                 <div className="pl-log" ref={logRef}>
                   {turns.length === 0 && !busy && (
-                    <div className="faint pl-hint">
-                      *{speaker.name} settles into the chair across from you.*
-                      <br />
-                      Ask about their past, press them on their secrets, or ask what they think
-                      of the other characters…
+                    <div className="pl-hint">
+                      <div className="faint" style={{ fontStyle: 'italic', marginBottom: 12 }}>
+                        *{speaker.name} settles into the chair across from you.*
+                      </div>
+                      <div className="row wrap" style={{ gap: 6 }}>
+                        {[
+                          'What do you want more than anything?',
+                          'What are you not telling me?',
+                          'What do you make of the others?',
+                          'Where does it hurt?',
+                        ].map((q) => (
+                          <button key={q} className="btn ghost small" onClick={() => setInput(q)}>
+                            ❝ {q}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {turns.map((t, i) =>

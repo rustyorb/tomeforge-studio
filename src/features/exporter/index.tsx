@@ -299,13 +299,18 @@ export default function ExporterPage() {
             </p>
             <button
               className="btn primary small"
-              onClick={() =>
+              onClick={() => {
                 downloadText(
                   `tomeforge-backup-${dateStamp()}.json`,
                   fullBackup(projects, styleProfiles),
                   'application/json',
                 )
-              }
+                try {
+                  localStorage.setItem('tomeforge-last-backup', String(Date.now()))
+                } catch {
+                  /* quota — the backup still downloaded */
+                }
+              }}
             >
               Download
             </button>

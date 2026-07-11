@@ -76,17 +76,109 @@ function contentOpf(title: string, author: string, chapters: Chapter[]): string 
     <dc:creator>${escapeHtml(author)}</dc:creator>
     <dc:language>en</dc:language>
     <meta property="dcterms:modified">${modifiedNow()}</meta>
+    <meta name="cover" content="cover-image"/>
   </metadata>
   <manifest>
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
     <item id="css" href="style.css" media-type="text/css"/>
+    <item id="cover-image" href="cover.png" media-type="image/png" properties="cover-image"/>
+    <item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>
 ${items}
   </manifest>
   <spine>
+    <itemref idref="cover"/>
 ${refs}
   </spine>
 </package>
 `
+}
+
+const COVER_XHTML = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Cover</title>
+  <style type="text/css">body { margin: 0; text-align: center; } img { max-width: 100%; height: auto; }</style>
+</head>
+<body>
+  <img src="cover.png" alt="Cover"/>
+</body>
+</html>
+`
+
+const COVER_PALETTE = ['#e0763a', '#c9a35c', '#6fae9b', '#a34434', '#5b6ee1', '#9a5b8f']
+
+function hashStr(s: string): number {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0
+  return h
+}
+
+/** Word-wrap canvas text into lines that fit maxWidth. */
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean)
+  const lines: string[] = []
+  let line = ''
+  for (const w of words) {
+    const trial = line ? `${line} ${w}` : w
+    if (ctx.measureText(trial).width > maxWidth && line) {
+      lines.push(line)
+      line = w
+    } else {
+      line = trial
+    }
+  }
+  if (line) lines.push(line)
+  return lines.slice(0, 6)
+}
+
+/** Paint a 1200×1800 book cover: layered gradients, typeset title/author. */
+async function bookCoverPng(title: string, author: string, genre: string): Promise<Uint8Array> {
+  const W = 1200
+  const H = 1800
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  const h = hashStr(title)
+  const c1 = COVER_PALETTE[h % COVER_PALETTE.length]
+  let i2 = (h >> 3) % COVER_PALETTE.length
+  if (COVER_PALETTE[i2] === c1) i2 = (i2 + 1) % COVER_PALETTE.length
+  const c2 = COVER_PALETTE[i2]
+
+  const grad = ctx.createLinearGradient(0, 0, W * 0.4, H)
+  grad.addColorStop(0, c1)
+  grad.addColorStop(1, '#100d0a')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, W, H)
+  const glow = ctx.createRadialGradient(W * 0.72, H * 0.3, 60, W * 0.72, H * 0.3, 900)
+  glow.addColorStop(0, c2 + 'bb')
+  glow.addColorStop(1, 'transparent')
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 0, W, H)
+  // Frame rule
+  ctx.strokeStyle = 'rgba(233, 224, 205, 0.35)'
+  ctx.lineWidth = 3
+  ctx.strokeRect(70, 70, W - 140, H - 140)
+
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'rgba(233, 224, 205, 0.7)'
+  ctx.font = '600 34px monospace'
+  if (genre) ctx.fillText(genre.toUpperCase().split('').join('  '), W / 2, 230)
+
+  ctx.fillStyle = 'rgba(238, 230, 214, 0.97)'
+  ctx.font = '600 108px Georgia, serif'
+  const lines = wrapText(ctx, title, W - 260)
+  const startY = H * 0.42 - ((lines.length - 1) * 128) / 2
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, startY + i * 128))
+
+  ctx.fillStyle = 'rgba(233, 224, 205, 0.85)'
+  ctx.font = '52px Georgia, serif'
+  ctx.fillText(author, W / 2, H - 200)
+
+  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'))
+  if (!blob) throw new Error('Could not render the cover.')
+  return new Uint8Array(await blob.arrayBuffer())
 }
 
 function navXhtml(title: string, chapters: Chapter[]): string {
@@ -145,6 +237,8 @@ export async function projectToEpub(project: Project, opts: EpubOptions): Promis
       ? project.chapters
       : [{ id: 'placeholder', title, scenes: [] }]
 
+  const cover = await bookCoverPng(title, author, project.genre)
+
   const zip = new JSZip()
   // Per the OCF spec, 'mimetype' must be the first entry and stored uncompressed.
   zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
@@ -152,6 +246,8 @@ export async function projectToEpub(project: Project, opts: EpubOptions): Promis
   zip.file('OEBPS/content.opf', contentOpf(title, author, chapters))
   zip.file('OEBPS/nav.xhtml', navXhtml(title, chapters))
   zip.file('OEBPS/style.css', STYLE_CSS)
+  zip.file('OEBPS/cover.png', cover)
+  zip.file('OEBPS/cover.xhtml', COVER_XHTML)
   chapters.forEach((ch, i) => {
     zip.file(`OEBPS/chapter-${i + 1}.xhtml`, chapterXhtml(ch))
   })

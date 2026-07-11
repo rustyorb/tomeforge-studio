@@ -72,7 +72,7 @@ export default function Corkboard(props: {
             {ch.scenes.map((sc) => (
               <div
                 key={sc.id}
-                className={`ms-cork-card ${dropTarget === `sc:${sc.id}` ? 'ms-drop-over' : ''}`}
+                className={`ms-cork-card ms-cork-${sc.status ?? 'draft'} ${dropTarget === `sc:${sc.id}` ? 'ms-drop-over' : ''}`}
                 draggable
                 onDragStart={(e) => {
                   dragRef.current = { sceneId: sc.id, fromChapter: ch.id }

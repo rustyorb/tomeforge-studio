@@ -15,6 +15,9 @@ export const PACINGS = [
 
 export type Pacing = (typeof PACINGS)[number]
 
+export const SCENE_STATUSES = ['draft', 'revising', 'final'] as const
+export type SceneStatus = (typeof SCENE_STATUSES)[number]
+
 export interface SceneSnapshot {
   id: ID
   label: string
@@ -29,6 +32,8 @@ export interface Scene {
   summary?: string
   /** Version history — capped, newest first */
   snapshots?: SceneSnapshot[]
+  /** Revision workflow state; undefined = draft */
+  status?: SceneStatus
 }
 
 export interface Chapter {

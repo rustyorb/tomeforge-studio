@@ -3,6 +3,7 @@ import type { ID } from '../../types'
 import GhostEditor from './GhostEditor'
 import type { GhostEditorHandle, GhostRequest } from './GhostEditor'
 import { wordCount } from './helpers'
+import { useHearth } from './useHearth'
 
 interface Props {
   sceneId: ID
@@ -23,6 +24,7 @@ interface Props {
  */
 export default function FocusMode(props: Props) {
   const ghostRef = useRef<GhostEditorHandle>(null)
+  const hearth = useHearth()
   const exitRef = useRef(props.onExit)
   useEffect(() => {
     exitRef.current = props.onExit
@@ -68,6 +70,13 @@ export default function FocusMode(props: Props) {
       <div className="ms-focus-hud">
         <span>{wordCount(props.value).toLocaleString()} words</span>
         {props.sprintText && <span className="ember-text">⏱ {props.sprintText}</span>}
+        <button
+          className="ms-hearth-btn"
+          title="The Hearth — ambient sound: off → fire → rain"
+          onClick={hearth.cycle}
+        >
+          {hearth.mode === 'off' ? '🔇 hearth' : hearth.mode === 'fire' ? '🔥 fire' : '🌧 rain'}
+        </button>
         <span>Ctrl+Space — ghost</span>
         <span>Esc — exit</span>
       </div>

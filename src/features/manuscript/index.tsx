@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ID, Project } from '../../types'
+import type { ID, Project, SceneStatus } from '../../types'
 import { useActiveProject, useProjectStyle, useStore } from '../../store/useStore'
 import { EmptyState, ErrorBanner } from '../../components/ui'
 import { buildStoryContext, tailOfManuscript } from '../../lib/context'
@@ -360,6 +360,23 @@ export default function ManuscriptPage() {
                     }}
                   />
                   <span className="row" style={{ flexShrink: 0 }}>
+                    <select
+                      className={`ms-status ms-status-${current.scene.status ?? 'draft'}`}
+                      value={current.scene.status ?? 'draft'}
+                      title="Revision status — also colors the card on the Corkboard"
+                      onChange={(e) => {
+                        const v = e.target.value as SceneStatus
+                        const id = current.scene.id
+                        mutate((d) => {
+                          const sc = sceneDraft(d, id)
+                          if (sc) sc.status = v
+                        })
+                      }}
+                    >
+                      <option value="draft">● draft</option>
+                      <option value="revising">● revising</option>
+                      <option value="final">● final</option>
+                    </select>
                     <span className="mono faint" style={{ whiteSpace: 'nowrap' }}>
                       {wordCount(current.scene.content).toLocaleString()} words this scene
                     </span>

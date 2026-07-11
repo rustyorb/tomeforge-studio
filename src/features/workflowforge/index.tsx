@@ -6,7 +6,8 @@ import { looseJson } from '../../lib/looseJson'
 import { downloadText } from '../../lib/export/download'
 import { ErrorBanner, Field } from '../../components/ui'
 import {
-  digestCatalog, exoticNodesUsed, fetchCatalog, sampleExotics, schemasFor, validateGraph,
+  CORE_NODES, digestCatalog, exoticNodesUsed, fetchCatalog, sampleExotics, schemasFor,
+  searchNodes, validateGraph,
 } from './catalog'
 import type { Catalog, Graph, ValidationIssue } from './catalog'
 
@@ -18,8 +19,13 @@ RULES:
 - Every ENUM input must use one of its listed legal values VERBATIM (checkpoints, samplers, etc.).
 - Numeric inputs get sensible values (steps 20-30, cfg 5-8, denoise 1.0 for txt2img).
 - Seeds: any integer.
-- The graph MUST end in a SaveImage node fed by a VAEDecode.
+- End in an output node: SaveImage (fed by VAEDecode) for images; for text or other outputs
+  use an appropriate Save/Preview/Show node from the catalog.
+- If the request needs an input image, use a LoadImage node with inputs.image set to ""
+  (the app uploads the user's file and fills it in before running).
 - Keep it as simple as the request allows; do not invent nodes for features not requested.
+- If TASK-RELEVANT NODES are provided, they exist on this server and are usually the right
+  tool — prefer them over approximating with core nodes.
 Respond with ONLY a fenced \`\`\`json block containing the workflow object — no commentary.`
 
 type Stage = 'idle' | 'catalog' | 'generating' | 'repairing' | 'running'
@@ -35,6 +41,7 @@ export default function WorkflowForgePage() {
   const [issues, setIssues] = useState<ValidationIssue[]>([])
   const [repaired, setRepaired] = useState(false)
   const [resultImg, setResultImg] = useState<string | null>(null)
+  const [inputImage, setInputImage] = useState<string | null>(null)
   const [runSecs, setRunSecs] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const catalogRef = useRef<Catalog | null>(null)
@@ -79,6 +86,15 @@ export default function WorkflowForgePage() {
       const catalog = catalogRef.current
       let digest = digestCatalog(catalog)
       let ask = `Build this workflow: ${request.trim()}`
+
+      // Task-aware retrieval: surface the exact hoard nodes this request needs.
+      const matched = searchNodes(catalog, request, 24).filter((n) => !CORE_NODES.includes(n))
+      if (matched.length) {
+        digest +=
+          '\n\nTASK-RELEVANT NODES from the user\'s installed collection (full schemas — ' +
+          'these exist on this server; strongly prefer them when they fit):\n' +
+          schemasFor(catalog, matched)
+      }
 
       // Surprise mode: dig 8 random exotic nodes out of the hoard, hand the
       // model their full schemas, and demand it actually uses one.
@@ -130,6 +146,37 @@ export default function WorkflowForgePage() {
     } finally {
       setStage('idle')
       abortRef.current = null
+    }
+  }
+
+  /** Does the graph contain a LoadImage slot that still needs a file? */
+  const emptyImageSlots = graph
+    ? Object.values(graph).filter(
+        (n) => n.class_type === 'LoadImage' && !(n.inputs?.image as string | undefined)?.trim(),
+      ).length
+    : 0
+
+  const uploadInputImage = async (file: File | undefined) => {
+    if (!file || !graph) return
+    setError(null)
+    try {
+      const form = new FormData()
+      form.append('image', file)
+      form.append('overwrite', 'true')
+      const res = await fetch(`${normalizeBase(comfyUrl)}/upload/image`, {
+        method: 'POST',
+        body: form,
+      })
+      if (!res.ok) throw new Error(`ComfyUI upload failed (${res.status}).`)
+      const info = (await res.json()) as { name: string }
+      const next = structuredClone(graph)
+      for (const node of Object.values(next)) {
+        if (node.class_type === 'LoadImage' && node.inputs) node.inputs.image = info.name
+      }
+      setGraph(next)
+      setInputImage(info.name)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -246,7 +293,12 @@ export default function WorkflowForgePage() {
               </p>
             </div>
             <div className="row wrap">
-              <button className="btn primary" disabled={busy} onClick={() => void run()}>
+              <button
+                className="btn primary"
+                disabled={busy || emptyImageSlots > 0}
+                title={emptyImageSlots > 0 ? 'Add the input image below first' : undefined}
+                onClick={() => void run()}
+              >
                 ▶ Run it now
               </button>
               <button
@@ -267,6 +319,23 @@ export default function WorkflowForgePage() {
               </button>
             </div>
           </div>
+
+          {(emptyImageSlots > 0 || inputImage) && (
+            <div className="row wrap" style={{ marginTop: 12, gap: 10 }}>
+              <span className="kicker">Input image</span>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ width: 'auto' }}
+                onChange={(e) => void uploadInputImage(e.target.files?.[0])}
+              />
+              {inputImage ? (
+                <span className="tag green">✓ {inputImage} uploaded to ComfyUI</span>
+              ) : (
+                <span className="tag brass">this workflow needs an image before it can run</span>
+              )}
+            </div>
+          )}
 
           {issues.length > 0 && (
             <div className="stack" style={{ marginTop: 12 }}>

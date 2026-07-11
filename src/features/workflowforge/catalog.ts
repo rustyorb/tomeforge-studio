@@ -117,6 +117,45 @@ export function sampleExotics(catalog: Catalog, count = 8): string[] {
   return picked
 }
 
+/** Intent → node-name fragments, so "img2text" finds interrogators etc. */
+const SYNONYMS: [RegExp, string[]][] = [
+  [/text|caption|interrogat|describe|prompt from|img2txt|image ?to ?text|tag/i,
+    ['caption', 'interrogat', 'tagger', 'blip', 'florence', 'wd14', 'joycaption', 'llava', 'vision', 'text']],
+  [/upscal|enlarge|2x|4x/i, ['upscale', 'esrgan', 'ultimate', 'supir']],
+  [/face|portrait fix|swap/i, ['face', 'reactor', 'detailer', 'insight']],
+  [/pose|skeleton/i, ['pose', 'openpose', 'dwpose', 'controlnet']],
+  [/depth/i, ['depth', 'midas', 'zoe', 'controlnet']],
+  [/inpaint|mask|erase/i, ['inpaint', 'mask', 'differential', 'segment']],
+  [/video|animat|motion/i, ['video', 'animatediff', 'svd', 'vhs', 'wan']],
+  [/background|rembg|cutout/i, ['rembg', 'background', 'matting', 'birefnet', 'segment']],
+  [/lora/i, ['lora']],
+  [/style|reference image|ip.?adapter/i, ['ipadapter', 'style']],
+  [/detail/i, ['detailer', 'refine']],
+]
+
+/** Search all installed nodes for ones relevant to a plain-text request. */
+export function searchNodes(catalog: Catalog, query: string, count = 24): string[] {
+  const tokens = new Set(
+    query.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3),
+  )
+  for (const [re, adds] of SYNONYMS) {
+    if (re.test(query)) adds.forEach((a) => tokens.add(a))
+  }
+  const scored: [string, number][] = []
+  for (const name of Object.keys(catalog)) {
+    const lower = name.toLowerCase()
+    let score = 0
+    for (const t of tokens) {
+      if (lower.includes(t)) score += t.length >= 4 ? 4 : 2
+    }
+    if (score > 0) scored.push([name, score])
+  }
+  return scored
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count)
+    .map(([n]) => n)
+}
+
 /** Which nodes in a graph are outside the core set — the fun ones. */
 export function exoticNodesUsed(graph: Graph): string[] {
   return [
@@ -150,7 +189,7 @@ export function validateGraph(graph: Graph, catalog: Catalog): ValidationIssue[]
       issues.push({ node: id, message: `unknown node type "${ct}" — not installed on this server` })
       continue
     }
-    if (ct.includes('SaveImage')) hasSave = true
+    if (/save|preview|show|display|write/i.test(ct)) hasSave = true
     const inputs = node.inputs ?? {}
     for (const [inputName, inputDef] of Object.entries(def.input?.required ?? {})) {
       const val = inputs[inputName]
@@ -187,7 +226,10 @@ export function validateGraph(graph: Graph, catalog: Catalog): ValidationIssue[]
     }
   }
   if (!hasSave) {
-    issues.push({ node: '-', message: 'graph has no SaveImage node — nothing would be output' })
+    issues.push({
+      node: '-',
+      message: 'graph has no output node (SaveImage for images, or a Save/Preview/Show node for text) — nothing would be output',
+    })
   }
   return issues
 }

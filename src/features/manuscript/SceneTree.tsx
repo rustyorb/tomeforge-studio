@@ -1,6 +1,19 @@
 import { useRef, useState } from 'react'
-import type { ID, Project } from '../../types'
+import type { ID, Project, Scene } from '../../types'
 import { uid } from '../../lib/id'
+import { Modal } from '../../components/ui'
+
+const TRASH_CAP = 30
+
+/** Move scenes into the project's trash (newest first, capped). */
+function trashScenes(d: Project, chapterTitle: string, scenes: Scene[]) {
+  if (!d.trashedScenes) d.trashedScenes = []
+  for (const scene of scenes) {
+    if (!scene.content.trim() && !scene.snapshots?.length) continue // blanks aren't worth keeping
+    d.trashedScenes.unshift({ scene, chapterTitle, deletedAt: Date.now() })
+  }
+  if (d.trashedScenes.length > TRASH_CAP) d.trashedScenes.length = TRASH_CAP
+}
 
 interface Props {
   project: Project
@@ -16,6 +29,20 @@ type DragPayload =
 export default function SceneTree(props: Props) {
   const [editingId, setEditingId] = useState<ID | null>(null)
   const [draft, setDraft] = useState('')
+  const [trashOpen, setTrashOpen] = useState(false)
+  const trash = props.project.trashedScenes ?? []
+
+  const restoreScene = (deletedAt: number) => {
+    props.mutate((d) => {
+      const idx = (d.trashedScenes ?? []).findIndex((t) => t.deletedAt === deletedAt)
+      if (idx < 0) return
+      const [item] = d.trashedScenes!.splice(idx, 1)
+      const home =
+        d.chapters.find((c) => c.title === item.chapterTitle) ?? d.chapters[d.chapters.length - 1]
+      if (home) home.scenes.push(item.scene)
+      else d.chapters.push({ id: uid(), title: item.chapterTitle, scenes: [item.scene] })
+    })
+  }
   // dataTransfer payloads aren't readable during dragover, so the payload
   // lives in a ref for the duration of the drag.
   const dragRef = useRef<DragPayload | null>(null)
@@ -156,10 +183,61 @@ export default function SceneTree(props: Props) {
     <div className="panel">
       <div className="panel-head">
         <span className="kicker">Outline</span>
-        <button className="btn ghost small" onClick={addChapter}>
-          ⊕ Chapter
-        </button>
+        <span className="row" style={{ gap: 4 }}>
+          {trash.length > 0 && (
+            <button
+              className="btn ghost small"
+              title={`Trash — ${trash.length} deleted scene${trash.length === 1 ? '' : 's'}, restorable`}
+              onClick={() => setTrashOpen(true)}
+            >
+              🗑 {trash.length}
+            </button>
+          )}
+          <button className="btn ghost small" onClick={addChapter}>
+            ⊕ Chapter
+          </button>
+        </span>
       </div>
+      {trashOpen && (
+        <Modal title="Scene Trash" onClose={() => setTrashOpen(false)}>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+            Deleted scenes wait here (newest first, last {30} kept). Restore puts a scene back
+            into its old chapter — or the last chapter if that one's gone.
+          </p>
+          <div className="stack">
+            {trash.map((t) => (
+              <div key={t.deletedAt + t.scene.id} className="row between" style={{ gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14 }}>{t.scene.title}</div>
+                  <div className="mono faint" style={{ fontSize: 10 }}>
+                    from "{t.chapterTitle}" · {new Date(t.deletedAt).toLocaleString()} ·{' '}
+                    {t.scene.content.trim().split(/\s+/).filter(Boolean).length} words
+                  </div>
+                </div>
+                <div className="row" style={{ flexShrink: 0 }}>
+                  <button className="btn small" onClick={() => restoreScene(t.deletedAt)}>
+                    Restore
+                  </button>
+                  <button
+                    className="btn ghost small danger"
+                    title="Delete forever"
+                    onClick={() =>
+                      props.mutate((d) => {
+                        d.trashedScenes = (d.trashedScenes ?? []).filter(
+                          (x) => x.deletedAt !== t.deletedAt,
+                        )
+                      })
+                    }
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            {trash.length === 0 && <p className="faint">The trash is empty.</p>}
+          </div>
+        </Modal>
+      )}
       <div className="panel-body" style={{ padding: 10 }}>
         {props.project.chapters.length === 0 && (
           <div className="faint" style={{ fontSize: 13, padding: 6 }}>
@@ -203,10 +281,12 @@ export default function SceneTree(props: Props) {
                 onClick={() => {
                   if (
                     confirm(
-                      `Delete chapter "${ch.title}" and its ${ch.scenes.length} scene(s)? This cannot be undone.`,
+                      `Delete chapter "${ch.title}" and its ${ch.scenes.length} scene(s)? Written scenes go to the trash.`,
                     )
                   ) {
                     props.mutate((d) => {
+                      const target = d.chapters.find((x) => x.id === ch.id)
+                      if (target) trashScenes(d, target.title, target.scenes)
                       d.chapters = d.chapters.filter((x) => x.id !== ch.id)
                     })
                   }
@@ -254,10 +334,13 @@ export default function SceneTree(props: Props) {
                   title="Delete scene"
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (confirm(`Delete scene "${sc.title}"? This cannot be undone.`)) {
+                    if (confirm(`Delete scene "${sc.title}"? It goes to the trash, restorable.`)) {
                       props.mutate((d) => {
                         const c = d.chapters.find((x) => x.id === ch.id)
-                        if (c) c.scenes = c.scenes.filter((s) => s.id !== sc.id)
+                        if (!c) return
+                        const target = c.scenes.find((s) => s.id === sc.id)
+                        if (target) trashScenes(d, c.title, [target])
+                        c.scenes = c.scenes.filter((s) => s.id !== sc.id)
                       })
                     }
                   }}

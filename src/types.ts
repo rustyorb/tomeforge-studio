@@ -243,6 +243,13 @@ export interface Branch {
   note: string
 }
 
+/** A scene rescued from deletion — restorable from the manuscript's trash */
+export interface TrashedScene {
+  scene: Scene
+  chapterTitle: string
+  deletedAt: number
+}
+
 export interface Project {
   id: ID
   name: string
@@ -266,6 +273,8 @@ export interface Project {
   quest: QuestState | null
   /** Saved StoryQuest branches ("what if…" timelines) */
   questSaves?: QuestSave[]
+  /** Recently deleted scenes, restorable (capped) */
+  trashedScenes?: TrashedScene[]
   branches: Branch[]
   /** Relationship graph woven by AI, cached until regenerated */
   castWeb?: CastWeb | null

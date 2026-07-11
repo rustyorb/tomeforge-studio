@@ -142,7 +142,36 @@ const THEME_TILES: { id: ThemeId; name: string; bg: string; accent: string; text
 ]
 
 function ImageGenCard() {
-  const { imageProvider, a1111Url, comfyUrl, comfyCheckpoint, imageSize, setImageGen } = useSettings()
+  const { imageProvider, a1111Url, comfyUrl, comfyCheckpoint, comfyWorkflow, imageSize, setImageGen } = useSettings()
+  const [wfError, setWfError] = useState<string | null>(null)
+
+  const loadWorkflow = async (file: File | undefined) => {
+    setWfError(null)
+    if (!file) return
+    try {
+      const text = await file.text()
+      const graph = JSON.parse(text) as Record<string, { class_type?: string }>
+      const nodes = Object.values(graph).filter((n) => n && typeof n === 'object' && n.class_type)
+      if (!nodes.length) throw new Error('No nodes found — export with "Save (API Format)" in ComfyUI.')
+      if (!nodes.some((n) => n.class_type!.includes('Sampler'))) {
+        throw new Error('No sampler node found — is this the API-format export?')
+      }
+      if (!nodes.some((n) => n.class_type!.includes('SaveImage'))) {
+        throw new Error('No SaveImage node — add one so the result can be fetched.')
+      }
+      setImageGen({ comfyWorkflow: text })
+    } catch (e) {
+      setWfError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const wfNodeCount = (() => {
+    try {
+      return comfyWorkflow ? Object.keys(JSON.parse(comfyWorkflow) as object).length : 0
+    } catch {
+      return 0
+    }
+  })()
   return (
     <div className="card" style={{ marginTop: 16 }}>
       <div className="kicker" style={{ marginBottom: 10 }}>Image Generation — your own GPUs</div>
@@ -194,17 +223,40 @@ function ImageGenCard() {
         </Field>
       )}
       {imageProvider === 'comfy' && (
-        <Field
-          label="Checkpoint (optional)"
-          hint="Blank = first available (alphabetical — risky if odd files sit in the folder). Partial names match, e.g. 'dreamshaper'."
-        >
-          <input
-            type="text"
-            value={comfyCheckpoint}
-            placeholder="e.g. DreamShaper_8_pruned.safetensors"
-            onChange={(e) => setImageGen({ comfyCheckpoint: e.target.value })}
-          />
-        </Field>
+        <>
+          <Field
+            label="Custom workflow (recommended)"
+            hint={'Export from ComfyUI with "Save (API Format)" and load it here. Your models, steps, and resolution are used exactly as saved — TomeForge injects only the prompt, negative, and a fresh seed.'}
+          >
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={(e) => void loadWorkflow(e.target.files?.[0])}
+            />
+            {comfyWorkflow && (
+              <div className="row" style={{ marginTop: 6 }}>
+                <span className="tag green">✓ custom workflow loaded · {wfNodeCount} nodes</span>
+                <button className="btn ghost small" onClick={() => setImageGen({ comfyWorkflow: '' })}>
+                  ✕ Use built-in instead
+                </button>
+              </div>
+            )}
+            {wfError && <div className="error-banner" style={{ marginTop: 6 }}>{wfError}</div>}
+          </Field>
+          {!comfyWorkflow && (
+            <Field
+              label="Checkpoint (built-in workflow)"
+              hint="Blank = first available (alphabetical — risky if odd files sit in the folder). Partial names match, e.g. 'dreamshaper'."
+            >
+              <input
+                type="text"
+                value={comfyCheckpoint}
+                placeholder="e.g. DreamShaper_8_pruned.safetensors"
+                onChange={(e) => setImageGen({ comfyCheckpoint: e.target.value })}
+              />
+            </Field>
+          )}
+        </>
       )}
     </div>
   )

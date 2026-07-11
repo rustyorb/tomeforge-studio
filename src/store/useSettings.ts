@@ -25,8 +25,10 @@ interface SettingsStore {
   imageProvider: 'off' | 'a1111' | 'comfy'
   a1111Url: string
   comfyUrl: string
-  /** ComfyUI checkpoint filename; blank = first available */
+  /** ComfyUI checkpoint filename; blank = first available (built-in workflow only) */
   comfyCheckpoint: string
+  /** Custom ComfyUI workflow (API-format JSON text); '' = built-in txt2img */
+  comfyWorkflow: string
   /** "widthxheight" for generated images */
   imageSize: string
   setProvider: (id: string) => void
@@ -34,7 +36,7 @@ interface SettingsStore {
   setMaxTokens: (n: number) => void
   setTheme: (t: ThemeId) => void
   setDailyGoal: (n: number) => void
-  setImageGen: (patch: Partial<Pick<SettingsStore, 'imageProvider' | 'a1111Url' | 'comfyUrl' | 'comfyCheckpoint' | 'imageSize'>>) => void
+  setImageGen: (patch: Partial<Pick<SettingsStore, 'imageProvider' | 'a1111Url' | 'comfyUrl' | 'comfyCheckpoint' | 'comfyWorkflow' | 'imageSize'>>) => void
 }
 
 function defaultProviders(): Record<string, ProviderConfig> {
@@ -65,6 +67,7 @@ export const useSettings = create<SettingsStore>()(
       a1111Url: '/a1111',
       comfyUrl: '/comfy',
       comfyCheckpoint: '',
+      comfyWorkflow: '',
       imageSize: '512x768',
       setProvider: (id) => set({ provider: id }),
       updateProvider: (id, patch) =>

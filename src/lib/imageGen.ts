@@ -112,38 +112,107 @@ function comfyWorkflow(
   }
 }
 
+interface ComfyNode {
+  class_type?: string
+  inputs?: Record<string, unknown>
+}
+
+/**
+ * Inject prompt/negative/seed into a user-supplied API-format workflow.
+ * The workflow's own models, steps, and resolution are left untouched —
+ * it is the source of truth; we only speak into its text slots.
+ */
+function injectWorkflow(
+  graph: Record<string, ComfyNode>,
+  prompt: string,
+  negative: string,
+): Record<string, ComfyNode> {
+  const seed = Math.floor(Math.random() * 2 ** 31)
+  const setText = (ref: unknown, text: string) => {
+    if (!Array.isArray(ref) || typeof ref[0] !== 'string') return
+    const enc = graph[ref[0]]
+    if (!enc?.inputs) return
+    if (typeof enc.inputs.text === 'string') enc.inputs.text = text
+    // SDXL dual encoders
+    if (typeof enc.inputs.text_g === 'string') enc.inputs.text_g = text
+    if (typeof enc.inputs.text_l === 'string') enc.inputs.text_l = text
+  }
+  for (const node of Object.values(graph)) {
+    if (!node?.class_type || !node.inputs) continue
+    if (node.class_type.includes('Sampler')) {
+      if (typeof node.inputs.seed === 'number') node.inputs.seed = seed
+      if (typeof node.inputs.noise_seed === 'number') node.inputs.noise_seed = seed
+      setText(node.inputs.positive, prompt)
+      setText(node.inputs.negative, negative)
+    }
+  }
+  return graph
+}
+
 async function comfyTxt2Img(req: ImageRequest): Promise<string> {
-  const { comfyUrl, imageSize } = useSettings.getState()
+  const { comfyUrl, imageSize, comfyWorkflow: customWorkflow } = useSettings.getState()
   const base = comfyUrl.replace(/\/$/, '')
   const { width, height } = parseSize(imageSize)
+
+  // Custom workflow path: the user's own graph, prompts injected.
+  if (customWorkflow.trim()) {
+    let graph: Record<string, ComfyNode>
+    try {
+      graph = JSON.parse(customWorkflow) as Record<string, ComfyNode>
+    } catch {
+      throw new Error('The saved ComfyUI workflow is not valid JSON — reload it in Settings.')
+    }
+    return comfySubmit(
+      base,
+      injectWorkflow(structuredClone(graph), req.prompt, req.negative ?? DEFAULT_NEGATIVE),
+      req.signal,
+    )
+  }
 
   let ckpt: string
   try {
     ckpt = await comfyGetCheckpoint(base, req.signal)
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') throw e
+    if (e instanceof Error && /Checkpoint|checkpoints/.test(e.message)) throw e
     throw new Error(
-      `Could not reach ComfyUI at ${comfyUrl}. Is it running with --enable-cors-header '*' ?`,
+      `Could not reach ComfyUI at ${comfyUrl}. Is it running (and reachable from this app)?`,
     )
   }
 
+  return comfySubmit(
+    base,
+    comfyWorkflow(
+      ckpt,
+      req.prompt,
+      req.negative ?? DEFAULT_NEGATIVE,
+      width,
+      height,
+      Math.floor(Math.random() * 2 ** 31),
+    ),
+    req.signal,
+  )
+}
+
+/** Submit a workflow graph, poll history, and return the image as a data URL. */
+async function comfySubmit(
+  base: string,
+  graph: unknown,
+  signal?: AbortSignal,
+): Promise<string> {
   const clientId = Math.random().toString(36).slice(2)
-  const submit = await fetch(`${base}/prompt`, {
-    method: 'POST',
-    signal: req.signal,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      client_id: clientId,
-      prompt: comfyWorkflow(
-        ckpt,
-        req.prompt,
-        req.negative ?? DEFAULT_NEGATIVE,
-        width,
-        height,
-        Math.floor(Math.random() * 2 ** 31),
-      ),
-    }),
-  })
+  let submit: Response
+  try {
+    submit = await fetch(`${base}/prompt`, {
+      method: 'POST',
+      signal,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId, prompt: graph }),
+    })
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    throw new Error(`Could not reach ComfyUI at ${base}.`)
+  }
   if (!submit.ok) {
     const detail = await submit.text().catch(() => submit.statusText)
     throw new Error(`ComfyUI rejected the workflow (${submit.status}): ${detail.slice(0, 200)}`)
@@ -152,9 +221,9 @@ async function comfyTxt2Img(req: ImageRequest): Promise<string> {
 
   // Poll history until the job lands (GPU time varies — be patient).
   for (let tries = 0; tries < 240; tries++) {
-    if (req.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     await new Promise((r) => setTimeout(r, 1000))
-    const hist = await fetch(`${base}/history/${prompt_id}`, { signal: req.signal })
+    const hist = await fetch(`${base}/history/${prompt_id}`, { signal })
     if (!hist.ok) continue
     const data = (await hist.json()) as Record<
       string,
@@ -179,7 +248,7 @@ async function comfyTxt2Img(req: ImageRequest): Promise<string> {
       if (img) {
         const view = await fetch(
           `${base}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder)}&type=${img.type}`,
-          { signal: req.signal },
+          { signal },
         )
         if (!view.ok) throw new Error(`ComfyUI /view error (${view.status}).`)
         const blob = await view.blob()

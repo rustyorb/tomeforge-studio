@@ -11,8 +11,10 @@ export default defineConfig({
     port: 5199,
     strictPort: true,
     proxy: {
+      // Local ComfyUI; switch target to http://192.168.0.69:8188 for the
+      // Linux GPU box when it's back in service.
       '/comfy': {
-        target: 'http://192.168.0.69:8188',
+        target: 'http://127.0.0.1:8188',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/comfy/, ''),
       },

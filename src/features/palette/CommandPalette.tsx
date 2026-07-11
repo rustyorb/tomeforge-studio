@@ -18,7 +18,8 @@ const PAGES: { to: string; glyph: string; name: string; keywords: string }[] = [
   { to: '/insights', glyph: '◍', name: 'Insights', keywords: 'stats analytics words observatory' },
   { to: '/export', glyph: '⇲', name: 'Import & Export', keywords: 'download markdown backup save epub rtf' },
   { to: '/sillytavern', glyph: '❖', name: 'SillyTavern', keywords: 'import character card lorebook world info png' },
-  { to: '/parlor', glyph: '❝', name: 'The Parlor', keywords: 'talk chat interview character conversation' },
+  { to: '/parlor', glyph: '❝', name: 'The Parlor', keywords: 'talk chat interview character conversation salon' },
+  { to: '/atlas', glyph: '🗺', name: 'The Atlas', keywords: 'map world terrain places pins cartography' },
   { to: '/settings', glyph: '⚙', name: 'Settings', keywords: 'api key provider model theme appearance' },
 ]
 

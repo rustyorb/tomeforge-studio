@@ -1,0 +1,76 @@
+.at-layout {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 14px;
+  align-items: start;
+}
+
+.at-map-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: crosshair;
+  box-shadow: var(--shadow);
+  line-height: 0;
+}
+
+.at-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.at-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: grab;
+  z-index: 2;
+  line-height: 1.2;
+}
+.at-pin:active { cursor: grabbing; }
+
+.at-pin-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ember);
+  border: 2px solid rgba(16, 13, 10, 0.9);
+  box-shadow: 0 0 6px rgba(224, 118, 58, 0.6);
+}
+.at-pin.active .at-pin-dot {
+  background: var(--ember-bright);
+  box-shadow: 0 0 12px rgba(244, 145, 79, 0.9);
+}
+
+.at-pin-label {
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #eee6d6;
+  text-shadow:
+    0 1px 2px rgba(16, 13, 10, 0.95),
+    0 0 6px rgba(16, 13, 10, 0.8);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.at-naming {
+  position: absolute;
+  transform: translate(-50%, 8px);
+  display: flex;
+  gap: 6px;
+  background: var(--ink-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+  z-index: 3;
+  box-shadow: var(--shadow);
+}
+.at-naming input { width: 190px; }
+
+.at-side { position: sticky; top: 16px; }

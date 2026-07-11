@@ -255,6 +255,14 @@ export interface Branch {
   note: string
 }
 
+export interface AtlasPin {
+  id: ID
+  name: string
+  /** Normalized 0-1 map coordinates */
+  x: number
+  y: number
+}
+
 /** A scene rescued from deletion — restorable from the manuscript's trash */
 export interface TrashedScene {
   scene: Scene
@@ -287,6 +295,8 @@ export interface Project {
   questSaves?: QuestSave[]
   /** Recently deleted scenes, restorable (capped) */
   trashedScenes?: TrashedScene[]
+  /** The Atlas: seeded terrain + named pins (0-1 normalized coordinates) */
+  atlas?: { seed: number; pins: AtlasPin[] }
   branches: Branch[]
   /** Relationship graph woven by AI, cached until regenerated */
   castWeb?: CastWeb | null

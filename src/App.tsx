@@ -18,6 +18,7 @@ import GoalRing from './features/goals/GoalRing'
 import { APP_VERSION } from './version'
 import SillyTavern from './features/sillytavern'
 import Parlor from './features/parlor'
+import Atlas from './features/atlas'
 
 function Nav() {
   const project = useActiveProject()
@@ -48,6 +49,9 @@ function Nav() {
       {link('/forgebench', '⚒', 'Forgebench', needsProject)}
       {link('/quest', '⚔', 'StoryQuest', needsProject)}
       {link('/parlor', '❝', 'The Parlor', needsProject)}
+
+      <div className="nav-section">The World</div>
+      {link('/atlas', '🗺', 'The Atlas', needsProject)}
 
       <div className="nav-section">Voice</div>
       {link('/voiceprint', '❦', 'Voiceprint')}
@@ -141,6 +145,7 @@ export default function App() {
           <Route path="/forgebench" element={project ? <Forgebench /> : <Navigate to="/" />} />
           <Route path="/quest" element={project ? <StoryQuest /> : <Navigate to="/" />} />
           <Route path="/parlor" element={project ? <Parlor /> : <Navigate to="/" />} />
+          <Route path="/atlas" element={project ? <Atlas /> : <Navigate to="/" />} />
           <Route path="/voiceprint" element={<Voiceprint />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/export" element={<Exporter />} />

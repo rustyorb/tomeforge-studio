@@ -80,6 +80,8 @@ flowchart TD
 | **⚔ StoryQuest** | Text-adventure engine: 6 GM modes, 8 commands (*Do, Say, Think, Inspect, Use, Travel, Wait, Remember*), tracked world state (**hand-editable** when the GM forgets your sword), **timeline branches**, d20 rolls, convert-any-branch-to-prose |
 | **❦ Voiceprint** | Style profiles: prose density, vocabulary, dialogue frequency, darkness, surrealism… plus POV and tense locks |
 | **◍ Insights** | GitHub-style writing heatmap, streaks, daily goal ring with ember-burst, manuscript composition stats |
+| **🗺 The Atlas** | A seeded, procedurally-inked map for the tome's world: world/continent, city/street, or building-floor styles; Codex locations pin themselves onto the terrain and pins drag to reposition; **✨ Invent** asks the AI for six new named places fitting the story; exports as PNG |
+| **⛭ Workflow Forge** | Talks to a **local ComfyUI** server: fetches its live node catalog, has an LLM assemble a working workflow graph from a plain-English request, validates the graph against the real catalog (auto-repairing bad node/input references), then runs it and shows the image and/or text results in-app. Also supports **Automatic1111** (`txt2img`) as a simpler local backend. Both run through same-origin dev-server proxies (`/comfy`, `/a1111`) so no CORS setup is needed |
 | **⇲ Import & Export** | EPUB **with generated cover art** · styled HTML · Markdown · RTF (Word) · plain text · Story Bible · full JSON backup/restore · **manuscript import** (.txt/.md → chapters & scenes) |
 | **❖ SillyTavern** | A full ST studio: **lossless round-trip** import/edit/export of cards (V1/V2/V3, .json/.png — system prompt, greetings, creator credits all preserved) and lorebooks · a **card & worldbook editor** (entries, trigger keys, secondary AND-keys) · **✨ AI generators** that forge original cards and whole worldbooks from a prompt · the **Card Forge** (Cast Ledger → spec card with Codex lorebook) · Codex ⇄ World Info both ways · secondary-key matching parity inside TomeForge's own context engine |
 
@@ -133,7 +135,9 @@ Drop `.json` or card `.png` files onto **Import & Export → Outside Worlds**:
 
 ## 🏗️ Stack
 
-React 18 · TypeScript (strict) · Vite · zustand (immer + persist) · jszip (EPUB) — and **three themes**: Ink & Ember 🕯️, Parchment 📜, Abyss 🌊.
+React 18 · TypeScript (strict) · Vite · React Router · zustand (immer + persist) · jszip (EPUB) — and **three themes**: Ink & Ember 🕯️, Parchment 📜, Abyss 🌊.
+
+Cloud model calls go straight from the browser to whichever provider you pick (Anthropic Messages API, or the OpenAI-compatible chat/completions API for everyone else). Local image generation talks to a ComfyUI or Automatic1111 server on your own machine through Vite dev-server proxies — no backend of TomeForge's own, ever.
 
 <div align="center">
 
